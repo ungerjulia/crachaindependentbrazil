@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crachá IB</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@300;400;500;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --black:#1a1a1a; --white:#ffffff; --border:#e0e0e0; --mid-gray:#888;
+    --clt-color:#111111; --pj-color:#5a5a5a;
+  }
+  body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#f5f5f5; color:var(--black); min-height:100vh; }
+
+  header { background:var(--black); padding:20px 40px; display:flex; align-items:center; gap:16px; }
+  .logo-box { width:40px; height:40px; background:var(--white); display:flex; align-items:center; justify-content:center; position:relative; }
+  .logo-box::before { content:''; position:absolute; inset:4px; border:2px solid var(--black); }
+  .logo-box span { font-size:14px; font-weight:700; color:var(--black); letter-spacing:-0.5px; position:relative; z-index:1; }
+  header h1 { color:var(--white); font-size:16px; font-weight:300; letter-spacing:3px; text-transform:uppercase; }
+
+  .container { max-width:1100px; margin:0 auto; padding:48px 32px; display:grid; grid-template-columns:360px 1fr; gap:48px; align-items:start; }
+
+  .form-panel { background:white; padding:36px; border:1px solid var(--border); }
+  .form-panel h2 { font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:32px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+  .field { margin-bottom:24px; }
+  label { display:block; font-size:10px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:8px; }
+  input[type="text"], input[type="date"] { width:100%; padding:12px 0; border:none; border-bottom:1.5px solid var(--border); background:transparent; font-family:inherit; font-size:15px; color:var(--black); outline:none; transition:border-color 0.2s; }
+  input[type="text"]:focus, input[type="date"]:focus { border-color:var(--black); }
+
+  .type-selector { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+  .type-option { cursor:pointer; position:relative; }
+  .type-option input { position:absolute; opacity:0; pointer-events:none; }
+  .type-option .type-swatch { padding:12px; border:1.5px solid var(--border); text-align:center; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; font-weight:500; transition:all 0.2s; color:var(--mid-gray); }
+  .type-option input:checked + .type-swatch { border-color:var(--black); color:var(--black); background:#fafafa; }
+
+  .photo-upload { border:1.5px dashed var(--border); padding:24px; text-align:center; cursor:pointer; transition:border-color 0.2s; position:relative; overflow:hidden; margin-bottom:8px; }
+  .photo-upload:hover { border-color:var(--black); }
+  .photo-upload input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .photo-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:none; }
+  .upload-icon { font-size:24px; margin-bottom:8px; display:block; color:var(--mid-gray); }
+  .upload-text { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--mid-gray); }
+
+  /* Photo quality indicator */
+  .photo-quality { margin-bottom:20px; padding:10px 14px; font-size:11px; letter-spacing:0.5px; display:none; border-left:3px solid; }
+  .photo-quality.ok   { border-color:#2e7d32; background:#f1f8e9; color:#2e7d32; }
+  .photo-quality.warn { border-color:#e65100; background:#fff3e0; color:#e65100; }
+  .photo-quality.bad  { border-color:#c62828; background:#ffebee; color:#c62828; }
+
+  .btn-generate { width:100%; padding:16px; background:var(--black); color:white; border:none; font-family:inherit; font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; cursor:pointer; transition:opacity 0.2s; margin-bottom:12px; }
+  .btn-generate:hover { opacity:0.8; }
+
+  .export-btns { display:none; gap:10px; }
+  .export-btns.visible { display:grid; grid-template-columns:1fr 1fr; }
+  .btn-export { padding:13px 8px; font-family:inherit; font-size:10px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; border:1.5px solid var(--black); background:transparent; color:var(--black); }
+  .btn-export:hover { background:var(--black); color:white; }
+  .btn-export.primary { background:var(--black); color:white; }
+  .btn-export.primary:hover { opacity:0.8; }
+
+  /* PREVIEW */
+  .preview-panel { display:flex; flex-direction:column; gap:32px; }
+  .preview-panel h2 { font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); padding-bottom:16px; border-bottom:1px solid var(--border); }
+  .cards-row { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .card-group { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .card-label-small { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); text-align:center; }
+
+  .badge { width:190px; height:303px; border-radius:10px; overflow:hidden; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.25); flex-shrink:0; }
+  .badge-slot { position:absolute; top:11px; left:50%; transform:translateX(-50%); width:44px; height:12px; background:rgba(0,0,0,0.5); border-radius:6px; z-index:10; }
+
+  .badge-front { background:var(--clt-color); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:30px 12px 18px; height:100%; }
+  .badge-front.pj { background:var(--pj-color); }
+
+  .badge-brand { font-size:10.5px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:white; text-align:center; line-height:1.35; flex-shrink:0; }
+  .badge-photo-ring { width:120px; height:120px; border-radius:50%; border:2.5px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; overflow:hidden; background:rgba(255,255,255,0.12); flex-shrink:0; }
+  .badge-photo-ring img { width:100%; height:100%; object-fit:cover; display:none; }
+  .badge-photo-placeholder { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .badge-photo-placeholder svg { width:60px; height:60px; fill:rgba(255,255,255,0.45); }
+  .badge-photo-size { font-size:7px; color:rgba(255,255,255,0.3); letter-spacing:1px; }
+  .badge-info { text-align:center; flex-shrink:0; }
+  .badge-name { font-size:9.5px; font-weight:700; color:white; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:3px; }
+  .badge-role { font-size:8px; color:rgba(255,255,255,0.55); letter-spacing:0.5px; }
+
+  .badge-back { background:var(--clt-color); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:12px 14px 14px; height:100%; }
+  .badge-back.pj { background:var(--pj-color); }
+  .badge-back-top { display:flex; justify-content:space-between; width:100%; align-items:center; }
+  .badge-recycle { font-size:9px; color:rgba(255,255,255,0.4); }
+  .badge-lian { font-size:5.5px; color:rgba(255,255,255,0.3); letter-spacing:0.5px; text-align:right; line-height:1.5; }
+
+  .badge-logo-box { width:68px; height:68px; border:3px solid white; display:flex; align-items:center; justify-content:center; }
+  .badge-logo-text { font-size:21px; font-weight:700; color:white; letter-spacing:-1px; }
+
+  .badge-back-bottom { text-align:center; }
+  .badge-admission-label { font-size:7px; color:rgba(255,255,255,0.45); margin-bottom:2px; }
+  .badge-admission-date { font-size:9px; font-weight:700; color:white; margin-bottom:7px; }
+  .badge-website { font-size:7px; font-weight:700; color:white; letter-spacing:0.2px; }
+
+  .specs-info { background:white; border:1px solid var(--border); padding:18px 24px; display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .spec { text-align:center; }
+  .spec-value { font-size:14px; font-weight:400; letter-spacing:0.5px; }
+  .spec-key { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid-gray); margin-top:3px; }
+
+  canvas { display:none; }
+
+  /* Print note */
+  .print-note { background:#f9f9f9; border:1px solid var(--border); padding:16px 20px; font-size:11px; color:var(--mid-gray); line-height:1.7; margin-top:8px; }
+  .print-note strong { color:var(--black); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-box"><span>IB</span></div>
+  <h1>Crachá IB</h1>
+</header>
+
+<div class="container">
+  <div class="form-panel">
+    <h2>Configurar Crachá</h2>
+
+    <div class="field">
+      <label>Tipo de Vínculo</label>
+      <div class="type-selector">
+        <label class="type-option">
+          <input type="radio" name="type" value="CLT" checked onchange="updatePreview()">
+          <div class="type-swatch">CLT — Preto</div>
+        </label>
+        <label class="type-option">
+          <input type="radio" name="type" value="PJ" onchange="updatePreview()">
+          <div class="type-swatch">PJ — Cinza</div>
+        </label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Foto do Colaborador (35×35mm)</label>
+      <div class="photo-upload">
+        <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(event)">
+        <img class="photo-preview" id="photoPreview" alt="">
+        <span class="upload-icon" id="uploadIcon">↑</span>
+        <div class="upload-text" id="uploadText">Clique para enviar a foto</div>
+      </div>
+      <div class="photo-quality" id="photoQuality"></div>
+    </div>
+
+    <div class="field">
+      <label>Nome Completo</label>
+      <input type="text" id="nameInput" placeholder="Ex: João da Silva" oninput="updatePreview()">
+    </div>
+
+    <div class="field">
+      <label>Função</label>
+      <input type="text" id="roleInput" placeholder="Ex: Designer Gráfico" oninput="updatePreview()">
+    </div>
+
+    <div class="field" id="admissionField">
+      <label>Data de Admissão</label>
+      <input type="date" id="admissionInput" onchange="updatePreview()">
+    </div>
+
+    <div class="field" id="cnpjField" style="display:none">
+      <label>CNPJ</label>
+      <input type="text" id="cnpjInput" placeholder="00.000.000/0000-00" oninput="updatePreview(); formatCNPJ(this)">
+    </div>
+
+    <button class="btn-generate" onclick="generateBadge()">Gerar Crachá</button>
+
+    <div class="export-btns" id="exportBtns">
+      <button class="btn-export primary" onclick="downloadPDF()">↓ PDF Gráfica</button>
+      <button class="btn-export" onclick="downloadPNG()">↓ PNG 300dpi</button>
+    </div>
+
+    <canvas id="exportCanvas"></canvas>
+  </div>
+
+  <div class="preview-panel">
+    <h2>Pré-visualização</h2>
+
+    <div class="specs-info">
+      <div class="spec"><div class="spec-value">54×86mm</div><div class="spec-key">Dimensões</div></div>
+      <div class="spec"><div class="spec-value">300 dpi</div><div class="spec-key">Resolução</div></div>
+      <div class="spec"><div class="spec-value">3mm</div><div class="spec-key">Sangria</div></div>
+      <div class="spec"><div class="spec-value">PVCL 0.76</div><div class="spec-key">Material</div></div>
+    </div>
+
+    <div class="cards-row">
+      <div class="card-group">
+        <div class="badge">
+          <div class="badge-slot"></div>
+          <div class="badge-front" id="badgeFrontInner">
+            <div class="badge-brand">INDEPENDENT<br>BRAZIL</div>
+            <div class="badge-photo-ring">
+              <img id="badgePhoto" src="" alt="">
+              <div class="badge-photo-placeholder" id="photoPlaceholder">
+                <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                <span class="badge-photo-size">FOTO 35×35</span>
+              </div>
+            </div>
+            <div class="badge-info">
+              <div class="badge-name" id="previewName">&lt;Nome Completo&gt;</div>
+              <div class="badge-role" id="previewRole">&lt;Função&gt;</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-label-small">Frente · Brilho</div>
+      </div>
+
+      <div class="card-group">
+        <div class="badge">
+          <div class="badge-slot"></div>
+          <div class="badge-back" id="badgeBackInner">
+            <div class="badge-back-top">
+              <span class="badge-recycle">♻</span>
+              <div class="badge-lian">⬡ LIAN CARD<br>Emissão: 00/00/00</div>
+            </div>
+            <div class="badge-logo-box">
+              <span class="badge-logo-text">IB</span>
+            </div>
+            <div class="badge-back-bottom">
+              <div class="badge-admission-label" id="backLabel">Admissão:</div>
+              <div class="badge-admission-date" id="previewDate">&lt;00/00/00&gt;</div>
+              <div class="badge-website">www.independentbrazil.com</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-label-small">Verso · Fosco</div>
+      </div>
+    </div>
+
+    <div class="print-note">
+      <strong>Especificações para gráfica:</strong><br>
+      Arquivo exportado com <strong>sangria de 3mm</strong> em todos os lados · Resolução <strong>300dpi</strong> ·
+      Dimensões finais com sangria: <strong>60×92mm</strong> · Formato PDF vetorial (texto) + PNG raster ·
+      Frente: PVCL brilho · Verso: PVCL fosco · Espessura: 0,76mm
+    </div>
+  </div>
+</div>
+
+<script>
+let photoDataURL = null;
+let photoNaturalW = 0, photoNaturalH = 0;
+
+// ── Photo quality check ──────────────────────────────────────
+// Photo area on card: 35x35mm @ 300dpi = 413x413px minimum
+const MIN_PHOTO_PX = 413;
+
+function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoDataURL = ev.target.result;
+    const img = new Image();
+    img.onload = () => {
+      photoNaturalW = img.naturalWidth;
+      photoNaturalH = img.naturalHeight;
+      checkPhotoQuality(img.naturalWidth, img.naturalHeight);
+
+      document.getElementById('photoPreview').src = photoDataURL;
+      document.getElementById('photoPreview').style.display = 'block';
+      document.getElementById('uploadIcon').style.display = 'none';
+      document.getElementById('uploadText').textContent = `${img.naturalWidth}×${img.naturalHeight}px`;
+
+      const ph = document.getElementById('badgePhoto');
+      ph.src = photoDataURL; ph.style.display = 'block';
+      document.getElementById('photoPlaceholder').style.display = 'none';
+    };
+    img.src = photoDataURL;
+  };
+  reader.readAsDataURL(file);
+}
+
+function checkPhotoQuality(w, h) {
+  const el = document.getElementById('photoQuality');
+  el.style.display = 'block';
+  const small = Math.min(w, h);
+  if (small >= MIN_PHOTO_PX) {
+    el.className = 'photo-quality ok';
+    el.textContent = `✓ Foto em boa resolução para impressão (${w}×${h}px)`;
+  } else if (small >= 200) {
+    el.className = 'photo-quality warn';
+    el.textContent = `⚠ Foto pode sair com qualidade reduzida (${w}×${h}px). Recomendado mínimo ${MIN_PHOTO_PX}×${MIN_PHOTO_PX}px.`;
+  } else {
+    el.className = 'photo-quality bad';
+    el.textContent = `✕ Foto muito pequena para gráfica (${w}×${h}px). Envie uma imagem maior.`;
+  }
+}
+
+function formatCNPJ(input) {
+  let v = input.value.replace(/\D/g,'');
+  v = v.replace(/^(\d{2})(\d)/,'$1.$2');
+  v = v.replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3');
+  v = v.replace(/\.(\d{3})(\d)/,'.$1/$2');
+  v = v.replace(/(\d{4})(\d)/,'$1-$2');
+  input.value = v.substring(0,18);
+}
+
+function updatePreview() {
+  const isPJ = document.querySelector('input[name="type"]:checked').value === 'PJ';
+  document.getElementById('badgeFrontInner').className = 'badge-front' + (isPJ ? ' pj' : '');
+  document.getElementById('badgeBackInner').className  = 'badge-back'  + (isPJ ? ' pj' : '');
+  document.getElementById('previewName').textContent = document.getElementById('nameInput').value || '<Nome Completo>';
+  document.getElementById('previewRole').textContent = document.getElementById('roleInput').value || '<Função>';
+  document.getElementById('cnpjField').style.display      = isPJ ? 'block' : 'none';
+  document.getElementById('admissionField').style.display = isPJ ? 'none'  : 'block';
+  const bl = document.getElementById('backLabel');
+  const pd = document.getElementById('previewDate');
+  if (isPJ) {
+    bl.textContent = 'CPNJ:';
+    pd.textContent = document.getElementById('cnpjInput').value || '<Número>';
+  } else {
+    bl.textContent = 'Admissão:';
+    const d = document.getElementById('admissionInput').value;
+    if (d) { const p=d.split('-'); pd.textContent=`<${p[2]}/${p[1]}/${p[0]}>`; }
+    else pd.textContent = '<00/00/00>';
+  }
+}
+
+function generateBadge() {
+  updatePreview();
+  document.getElementById('exportBtns').className = 'export-btns visible';
+}
+
+// ── Canvas drawing helpers ────────────────────────────────────
+// 54×86mm + 3mm bleed each side = 60×92mm @ 300dpi
+// 1mm = 11.811px @ 300dpi
+const DPI    = 300;
+const MM     = DPI / 25.4;          // px per mm ≈ 11.811
+const BW     = Math.round(54 * MM); // badge width  638px
+const BH     = Math.round(86 * MM); // badge height 1016px
+const BLEED  = Math.round(3 * MM);  // 3mm bleed    35px
+const CW     = BW + BLEED * 2;      // canvas width  709px
+const CH     = BH + BLEED * 2;      // canvas height 1087px
+
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+
+function drawBadgeBase(ctx, color, isFront) {
+  // Bleed area same color
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, CW, CH);
+  // Crop marks (thin black lines outside bleed)
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 1;
+  const mk = 10; // mark length px
+  const g  = 4;  // gap from card edge
+  // corners: TL, TR, BL, BR
+  [[BLEED-g-mk, BLEED, BLEED-g, BLEED],         // TL H
+   [0, BLEED-g-mk, 0, BLEED-g],                  // TL V (swap)
+   [CW-BLEED+g, BLEED, CW-BLEED+g+mk, BLEED],   // TR H
+   [CW-BLEED+g, 0, CW-BLEED+g, BLEED-g],         // TR V
+   [BLEED-g-mk, CH-BLEED, BLEED-g, CH-BLEED],   // BL H
+   [0, CH-BLEED+g, 0, CH-BLEED+g+mk],            // BL V
+   [CW-BLEED+g, CH-BLEED, CW-BLEED+g+mk, CH-BLEED], // BR H
+   [CW-BLEED+g, CH-BLEED+g, CW-BLEED+g, CH-BLEED+g+mk] // BR V
+  ].forEach(([x1,y1,x2,y2]) => {
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  });
+}
+
+function drawFrontCanvas(ctx, color, name, role) {
+  drawBadgeBase(ctx, color, true);
+
+  const ox = BLEED, oy = BLEED; // card origin
+
+  // Slot
+  const slotW = Math.round(13*MM), slotH = Math.round(4*MM);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  rr(ctx, ox+BW/2-slotW/2, oy+Math.round(3.5*MM), slotW, slotH, slotH/2);
+  ctx.fill();
+
+  // Brand — top area
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  const brandSize = Math.round(5.0*MM);
+  ctx.font = `bold ${brandSize}px Helvetica,Arial`;
+  ctx.fillText('INDEPENDENT', ox+BW/2, oy+Math.round(15*MM));
+  ctx.fillText('BRAZIL',      ox+BW/2, oy+Math.round(21.5*MM));
+
+  // Photo circle — large, centered in the middle zone (between brand and name)
+  // Name sits at ~74mm from top, brand ends at ~23mm, center = ~48mm
+  const cx = ox+BW/2;
+  const cy = oy+Math.round(48*MM);
+  const cr = Math.round(19*MM); // 38mm diameter — matches reference
+
+  ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = Math.round(0.5*MM); ctx.stroke();
+
+  return { cx, cy, cr }; // caller fills photo
+}
+
+function finishFrontCanvas(ctx, cx, cy, cr, name, role, ox, oy) {
+  // Name — bottom area
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.font = `bold ${Math.round(3.8*MM)}px Helvetica,Arial`;
+  ctx.fillText(name.toUpperCase(), ox+BW/2, oy+Math.round(74*MM));
+  // Role
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = `${Math.round(3.0*MM)}px Helvetica,Arial`;
+  ctx.fillText(role, ox+BW/2, oy+Math.round(79*MM));
+}
+
+function drawBackCanvas(ctx, color, bottomLabel, bottomValue) {
+  drawBadgeBase(ctx, color, false);
+  const ox = BLEED, oy = BLEED;
+
+  // Slot
+  const slotW = Math.round(13*MM), slotH = Math.round(4*MM);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  rr(ctx, ox+BW/2-slotW/2, oy+Math.round(3.5*MM), slotW, slotH, slotH/2);
+  ctx.fill();
+
+  // Recycle
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = `${Math.round(4*MM)}px Arial`;
+  ctx.textAlign = 'left';
+  ctx.fillText('♻', ox+Math.round(4*MM), oy+Math.round(10*MM));
+
+  // Lian Card label
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = `${Math.round(2.2*MM)}px Helvetica,Arial`;
+  ctx.textAlign = 'right';
+  ctx.fillText('LIAN CARD',       ox+BW-Math.round(4*MM), oy+Math.round(8*MM));
+  ctx.fillText('Emissão: 00/00/00', ox+BW-Math.round(4*MM), oy+Math.round(11*MM));
+
+  // IB Logo box — single white border
+  const ls  = Math.round(20*MM);
+  const lx  = ox+BW/2 - ls/2;
+  const ly  = oy+BH/2 - ls/2 - Math.round(3*MM);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth   = Math.round(0.8*MM);
+  ctx.strokeRect(lx, ly, ls, ls);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font      = `bold ${Math.round(9.5*MM)}px Helvetica,Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText('IB', ox+BW/2, ly+ls-Math.round(3.5*MM));
+
+  // Bottom info
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.font      = `${Math.round(2.5*MM)}px Helvetica,Arial`;
+  ctx.textAlign = 'center';
+  ctx.fillText(bottomLabel, ox+BW/2, oy+BH-Math.round(14*MM));
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font      = `bold ${Math.round(3.2*MM)}px Helvetica,Arial`;
+  ctx.fillText(bottomValue, ox+BW/2, oy+BH-Math.round(9.8*MM));
+
+  ctx.font = `bold ${Math.round(2.8*MM)}px Helvetica,Arial`;
+  ctx.fillText('www.independentbrazil.com', ox+BW/2, oy+BH-Math.round(5.5*MM));
+}
+
+// ── Get form values ───────────────────────────────────────────
+function getVals() {
+  const isPJ = document.querySelector('input[name="type"]:checked').value === 'PJ';
+  const name = document.getElementById('nameInput').value || 'Nome Completo';
+  const role = document.getElementById('roleInput').value || 'Função';
+  const admDate = document.getElementById('admissionInput').value;
+  const cnpj    = document.getElementById('cnpjInput').value;
+  const color   = isPJ ? '#5a5a5a' : '#111111';
+  const type    = isPJ ? 'PJ' : 'CLT';
+  let bottomLabel = isPJ ? 'CPNJ:' : 'Admissão:';
+  let bottomValue = isPJ
+    ? (cnpj || '<Número>')
+    : (admDate ? (()=>{ const p=admDate.split('-'); return `<${p[2]}/${p[1]}/${p[0]}>`; })() : '<00/00/00>');
+  return { isPJ, name, role, color, type, bottomLabel, bottomValue };
+}
+
+// ── Draw onto canvas and return Promise ───────────────────────
+function renderFrontToCanvas(canvas, vals) {
+  return new Promise(resolve => {
+    canvas.width = CW; canvas.height = CH;
+    const ctx = canvas.getContext('2d');
+    const { cx, cy, cr } = drawFrontCanvas(ctx, vals.color, vals.name, vals.role);
+    const ox = BLEED, oy = BLEED;
+    if (photoDataURL) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.save();
+        ctx.beginPath(); ctx.arc(cx, cy, cr-Math.round(0.4*MM), 0, Math.PI*2); ctx.clip();
+        ctx.drawImage(img, cx-cr+Math.round(0.4*MM), cy-cr+Math.round(0.4*MM), (cr-Math.round(0.4*MM))*2, (cr-Math.round(0.4*MM))*2);
+        ctx.restore();
+        finishFrontCanvas(ctx, cx, cy, cr, vals.name, vals.role, ox, oy);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.src = photoDataURL;
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = `${Math.round(2.5*MM)}px Helvetica,Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillText('FOTO 35×35', cx, cy+Math.round(1*MM));
+      finishFrontCanvas(ctx, cx, cy, cr, vals.name, vals.role, ox, oy);
+      resolve(canvas.toDataURL('image/png'));
+    }
+  });
+}
+
+function renderBackToCanvas(canvas, vals) {
+  canvas.width = CW; canvas.height = CH;
+  const ctx = canvas.getContext('2d');
+  drawBackCanvas(ctx, vals.color, vals.bottomLabel, vals.bottomValue);
+  return canvas.toDataURL('image/png');
+}
+
+// ── PNG Download ──────────────────────────────────────────────
+async function downloadPNG() {
+  const vals = getVals();
+  const canvas = document.getElementById('exportCanvas');
+
+  // FRONT
+  const frontDataURL = await renderFrontToCanvas(canvas, vals);
+  triggerDownload(frontDataURL, `cracha-${vals.type}-FRENTE-300dpi.png`);
+
+  // BACK (slight delay)
+  setTimeout(() => {
+    const backDataURL = renderBackToCanvas(canvas, vals);
+    triggerDownload(backDataURL, `cracha-${vals.type}-VERSO-300dpi.png`);
+  }, 400);
+}
+
+function triggerDownload(dataURL, filename) {
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataURL;
+  link.click();
+}
+
+// ── PDF Download ──────────────────────────────────────────────
+async function downloadPDF() {
+  const vals = getVals();
+  const canvas = document.getElementById('exportCanvas');
+
+  // mm dimensions with bleed
+  const pageW = 60; // 54 + 3+3
+  const pageH = 92; // 86 + 3+3
+
+  const { jsPDF } = window.jspdf;
+
+  // Render front
+  const frontDataURL = await renderFrontToCanvas(canvas, vals);
+  // Render back
+  const backDataURL = renderBackToCanvas(canvas, vals);
+
+  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, pageH] });
+
+  // Page 1: Front
+  pdf.addImage(frontDataURL, 'PNG', 0, 0, pageW, pageH, undefined, 'FAST');
+
+  // Crop mark lines on PDF (thin gray)
+  pdf.setDrawColor(180); pdf.setLineWidth(0.1);
+  // bleed guide box
+  pdf.rect(3, 3, 54, 86);
+
+  // Page 2: Back
+  pdf.addPage([pageW, pageH]);
+  pdf.addImage(backDataURL, 'PNG', 0, 0, pageW, pageH, undefined, 'FAST');
+  pdf.setDrawColor(180); pdf.setLineWidth(0.1);
+  pdf.rect(3, 3, 54, 86);
+
+  // Metadata
+  pdf.setProperties({
+    title: `Crachá IB – ${vals.type}`,
+    subject: 'Crachá Independent Brazil – Arquivo para gráfica',
+    author: 'Independent Brazil',
+    keywords: `cracha,${vals.type},grafica,300dpi,PVCL`,
+    creator: 'Crachá IB App'
+  });
+
+  pdf.save(`cracha-IB-${vals.type}-GRAFICA.pdf`);
+}
+
+updatePreview();
+</script>
+</body>
+</html>
