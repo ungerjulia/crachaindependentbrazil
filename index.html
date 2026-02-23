@@ -87,8 +87,8 @@
   .badge-recycle { font-size:9px; color:rgba(255,255,255,0.4); }
   .badge-lian { font-size:5.5px; color:rgba(255,255,255,0.3); letter-spacing:0.5px; text-align:right; line-height:1.5; }
 
-  .badge-logo-box { width:68px; height:68px; border:3px solid white; display:flex; align-items:center; justify-content:center; }
-  .badge-logo-text { font-size:21px; font-weight:700; color:white; letter-spacing:-1px; }
+  .badge-logo-box { width:90px; height:90px; border:6px solid white; display:flex; align-items:center; justify-content:center; }
+  .badge-logo-text { font-size:50px; font-weight:700; color:white; letter-spacing:-2px; line-height:1; }
 
   .badge-back-bottom { text-align:center; }
   .badge-admission-label { font-size:7px; color:rgba(255,255,255,0.45); margin-bottom:2px; }
@@ -229,9 +229,8 @@
 
     <div class="print-note">
       <strong>Especificações para gráfica:</strong><br>
-      Arquivo exportado com <strong>sangria de 3mm</strong> em todos os lados · Resolução <strong>300dpi</strong> ·
-      Dimensões finais com sangria: <strong>60×92mm</strong> · Formato PDF vetorial (texto) + PNG raster ·
-      Frente: PVCL brilho · Verso: PVCL fosco · Espessura: 0,76mm
+      Resolução <strong>300dpi</strong> · Dimensões finais: <strong>638×1016px</strong> (54×86mm) ·
+      Com sangria 3mm: <strong>708×1086px</strong> (60×92mm) · Frente: PVCL brilho · Verso: PVCL fosco · Espessura: 0,76mm
     </div>
   </div>
 </div>
@@ -429,18 +428,18 @@ function drawBackCanvas(ctx, color, bottomLabel, bottomValue) {
   ctx.fillText('LIAN CARD',       ox+BW-Math.round(4*MM), oy+Math.round(8*MM));
   ctx.fillText('Emissão: 00/00/00', ox+BW-Math.round(4*MM), oy+Math.round(11*MM));
 
-  // IB Logo box — single white border
-  const ls  = Math.round(20*MM);
+  // IB Logo box — single white border, thick, large text filling box
+  const ls  = Math.round(28*MM);
   const lx  = ox+BW/2 - ls/2;
-  const ly  = oy+BH/2 - ls/2 - Math.round(3*MM);
+  const ly  = oy+BH/2 - ls/2 - Math.round(2*MM);
   ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth   = Math.round(0.8*MM);
+  ctx.lineWidth   = Math.round(2.6*MM);
   ctx.strokeRect(lx, ly, ls, ls);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font      = `bold ${Math.round(9.5*MM)}px Helvetica,Arial`;
+  ctx.font      = `bold ${Math.round(20*MM)}px Helvetica,Arial`;
   ctx.textAlign = 'center';
-  ctx.fillText('IB', ox+BW/2, ly+ls-Math.round(3.5*MM));
+  ctx.fillText('IB', ox+BW/2, ly+ls-Math.round(5.5*MM));
 
   // Bottom info
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
@@ -477,12 +476,16 @@ function renderFrontToCanvas(canvas, vals) {
   return new Promise(resolve => {
     canvas.width = CW; canvas.height = CH;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     const { cx, cy, cr } = drawFrontCanvas(ctx, vals.color, vals.name, vals.role);
     const ox = BLEED, oy = BLEED;
     if (photoDataURL) {
       const img = new Image();
       img.onload = () => {
         ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.beginPath(); ctx.arc(cx, cy, cr-Math.round(0.4*MM), 0, Math.PI*2); ctx.clip();
         ctx.drawImage(img, cx-cr+Math.round(0.4*MM), cy-cr+Math.round(0.4*MM), (cr-Math.round(0.4*MM))*2, (cr-Math.round(0.4*MM))*2);
         ctx.restore();
@@ -506,6 +509,8 @@ function renderFrontToCanvas(canvas, vals) {
 function renderBackToCanvas(canvas, vals) {
   canvas.width = CW; canvas.height = CH;
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   drawBackCanvas(ctx, vals.color, vals.bottomLabel, vals.bottomValue);
   return canvas.toDataURL('image/png');
 }
