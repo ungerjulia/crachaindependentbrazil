@@ -81,7 +81,7 @@
   .badge-name { font-size:9.5px; font-weight:700; color:white; letter-spacing:0.5px; text-transform:uppercase; margin-bottom:3px; }
   .badge-role { font-size:8px; color:rgba(255,255,255,0.55); letter-spacing:0.5px; }
 
-  .badge-back { background:var(--clt-color); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:12px 14px 14px; height:100%; }
+  .badge-back { background:var(--clt-color); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:16px 14px; height:100%; }
   .badge-back.pj { background:var(--pj-color); }
   .badge-back-top { display:flex; justify-content:space-between; width:100%; align-items:center; }
   .badge-recycle { font-size:9px; color:rgba(255,255,255,0.4); }
@@ -92,7 +92,7 @@
 
   .badge-back-bottom { text-align:center; }
   .badge-admission-label { font-size:7px; color:rgba(255,255,255,0.45); margin-bottom:2px; }
-  .badge-admission-date { font-size:9px; font-weight:700; color:white; margin-bottom:7px; }
+  .badge-admission-date { font-size:9px; font-weight:700; color:white; margin-bottom:5px; }
   .badge-website { font-size:7px; font-weight:700; color:white; letter-spacing:0.2px; }
 
   .specs-info { background:white; border:1px solid var(--border); padding:18px 24px; display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
@@ -209,10 +209,7 @@
         <div class="badge">
           <div class="badge-slot"></div>
           <div class="badge-back" id="badgeBackInner">
-            <div class="badge-back-top">
-              <span class="badge-recycle">♻</span>
-              <div class="badge-lian">⬡ LIAN CARD<br>Emissão: 00/00/00</div>
-            </div>
+
             <div class="badge-logo-box">
               <span class="badge-logo-text">IB</span>
             </div>
@@ -415,18 +412,7 @@ function drawBackCanvas(ctx, color, bottomLabel, bottomValue) {
   rr(ctx, ox+BW/2-slotW/2, oy+Math.round(3.5*MM), slotW, slotH, slotH/2);
   ctx.fill();
 
-  // Recycle
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = `${Math.round(4*MM)}px Arial`;
-  ctx.textAlign = 'left';
-  ctx.fillText('♻', ox+Math.round(4*MM), oy+Math.round(10*MM));
-
-  // Lian Card label
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.font = `${Math.round(2.2*MM)}px Helvetica,Arial`;
-  ctx.textAlign = 'right';
-  ctx.fillText('LIAN CARD',       ox+BW-Math.round(4*MM), oy+Math.round(8*MM));
-  ctx.fillText('Emissão: 00/00/00', ox+BW-Math.round(4*MM), oy+Math.round(11*MM));
+  // (sem ícone reciclagem e sem label Lian Card)
 
   // IB Logo box — single white border, thick, large text filling box
   const ls  = Math.round(28*MM);
