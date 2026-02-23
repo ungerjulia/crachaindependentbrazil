@@ -29,7 +29,7 @@
   .form-panel { background:white; padding:36px; border:1px solid var(--border); }
   .form-panel h2 { font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:32px; padding-bottom:16px; border-bottom:1px solid var(--border); }
   .field { margin-bottom:24px; }
-  label { display:block; font-size:10px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:8px; }
+  .field > label { display:block; font-size:10px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:8px; }
   input[type="text"], input[type="date"] { width:100%; padding:12px 0; border:none; border-bottom:1.5px solid var(--border); background:transparent; font-family:inherit; font-size:15px; color:var(--black); outline:none; transition:border-color 0.2s; }
   input[type="text"]:focus, input[type="date"]:focus { border-color:var(--black); }
 
@@ -57,8 +57,8 @@
   /* NAME/ROLE WITH CASE TOGGLE */
   .input-with-toggle { display:flex; align-items:flex-end; gap:8px; border-bottom:1.5px solid var(--border); transition:border-color 0.2s; }
   .input-with-toggle:focus-within { border-color:var(--black); }
-  .input-with-toggle input { border-bottom:none !important; flex:1; padding-bottom:10px; }
-  .case-toggle { flex-shrink:0; padding:0 0 10px; background:none; border:none; font-family:inherit; font-size:10px; font-weight:700; color:var(--mid-gray); cursor:pointer; transition:color 0.2s; }
+  .input-with-toggle input { border-bottom:none !important; flex:1; padding-bottom:10px; text-transform:none; }
+  .case-toggle { flex-shrink:0; padding:0 0 10px; background:none; border:none; font-family:inherit; font-size:10px; font-weight:700; color:var(--mid-gray); cursor:pointer; transition:color 0.2s; text-transform:none; }
   .case-toggle.active { color:var(--black); }
   .case-toggle:hover { color:var(--black); }
 
@@ -161,7 +161,7 @@
       <label>Nome Completo</label>
       <div class="input-with-toggle">
         <input type="text" id="nameInput" placeholder="Ex: João da Silva" oninput="updatePreview()">
-        <button class="case-toggle active" id="nameCase" onclick="toggleCase('name')">AA</button>
+        <button class="case-toggle" id="nameCase" onclick="toggleCase('name')">Aa</button>
       </div>
     </div>
 
@@ -255,7 +255,7 @@
 <script>
 // ── Estado ────────────────────────────────────────────────────
 let photoDataURL = null;
-const caseState = { name: true, role: false };
+const caseState = { name: false, role: false };
 
 function toggleCase(field) {
   caseState[field] = !caseState[field];
