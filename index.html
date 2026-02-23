@@ -103,7 +103,7 @@
   .badge-photo-placeholder svg { width:60px; height:60px; fill:rgba(255,255,255,0.45); }
   .badge-photo-size { font-size:7px; color:rgba(255,255,255,0.3); letter-spacing:1px; }
   .badge-info { text-align:center; flex-shrink:0; }
-  .badge-name { font-size:9.5px; font-weight:700; color:white; letter-spacing:0.5px; margin-bottom:3px; }
+  .badge-name { font-size:9.5px; font-weight:700; color:white; letter-spacing:0.5px; margin-bottom:3px; word-break:break-word; text-align:center; line-height:1.4; max-width:160px; }
   .badge-role { font-size:8px; color:rgba(255,255,255,0.55); letter-spacing:0.5px; word-break:break-word; text-align:center; line-height:1.4; max-width:160px; }
 
   /* BACK */
@@ -428,20 +428,25 @@ function drawFront(ctx, color, name, role) {
 
 function finishFront(ctx, info, name, role) {
   var ox = info.ox, oy = info.oy;
+  var maxW = BW - Math.round(16*MM);
+  var lineH = Math.round(4.5*MM);
 
-  // Name
+  // Name with word wrap
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
   ctx.font = 'bold ' + Math.round(3.8*MM) + 'px Helvetica,Arial';
-  ctx.fillText(name, ox+BW/2, oy+Math.round(74*MM));
+  var nameLines = wrapText(ctx, name, maxW);
+  for (var i = 0; i < nameLines.length; i++) {
+    ctx.fillText(nameLines[i], ox+BW/2, oy+Math.round(74*MM) + i*lineH);
+  }
 
-  // Role with word wrap
+  // Role with word wrap — starts right after name
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.font = Math.round(3.0*MM) + 'px Helvetica,Arial';
-  var maxW = BW - Math.round(16*MM);
-  var lineH = Math.round(4*MM);
-  var lines = wrapText(ctx, role, maxW);
-  for (var i = 0; i < lines.length; i++) {
-    ctx.fillText(lines[i], ox+BW/2, oy+Math.round(79*MM) + i*lineH);
+  var roleLineH = Math.round(4*MM);
+  var roleStartY = oy+Math.round(74*MM) + nameLines.length * lineH;
+  var roleLines = wrapText(ctx, role, maxW);
+  for (var j = 0; j < roleLines.length; j++) {
+    ctx.fillText(roleLines[j], ox+BW/2, roleStartY + j*roleLineH);
   }
 }
 
