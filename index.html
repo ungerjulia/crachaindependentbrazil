@@ -97,7 +97,7 @@
   .badge-front { display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:30px 12px 18px; height:100%; background:var(--clt); }
   .badge-front.pj { background:var(--pj); }
   .badge-brand { font-size:10.5px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:white; text-align:center; line-height:1.35; flex-shrink:0; }
-  .badge-photo-ring { width:120px; height:120px; border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; overflow:hidden; background:rgba(255,255,255,0.12); flex-shrink:0; }
+  .badge-photo-ring { width:120px; height:120px; border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; overflow:hidden; background:rgba(255,255,255,0.12); flex-shrink:0; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
   .badge-photo-ring img { width:100%; height:100%; object-fit:cover; display:none; }
   .badge-photo-placeholder { display:flex; flex-direction:column; align-items:center; gap:3px; }
   .badge-photo-placeholder svg { width:60px; height:60px; fill:rgba(255,255,255,0.45); }
@@ -244,11 +244,7 @@
       </div>
     </div>
 
-    <div class="print-note">
-      <strong>Especificações para gráfica:</strong><br>
-      Resolução <strong>300dpi</strong> · Dimensões: <strong>638×1016px</strong> (54×86mm) ·
-      Com sangria 3mm: <strong>708×1086px</strong> · Frente: PVCL brilho · Verso: PVCL fosco · Espessura: 0,76mm
-    </div>
+
   </div>
 </div>
 
@@ -353,8 +349,8 @@ function generateBadge() {
   document.getElementById('exportBtns').className = 'export-btns visible';
 }
 
-// ── Canvas constants (300dpi + 3mm bleed) ────────────────────
-var DPI   = 300;
+// ── Canvas constants (600dpi + 3mm bleed) ────────────────────
+var DPI   = 600;
 var MM    = DPI / 25.4;
 var BW    = Math.round(54 * MM);
 var BH    = Math.round(86 * MM);
@@ -421,7 +417,7 @@ function drawFront(ctx, color, name, role) {
   // Photo circle
   var cx = ox+BW/2, cy = oy+Math.round(48*MM), cr = Math.round(19*MM);
   ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2);
-  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.round(1.2*MM); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); // background fill only, border drawn after photo
 
   return { cx:cx, cy:cy, cr:cr, ox:ox, oy:oy };
 }
@@ -512,15 +508,23 @@ function renderFront(canvas, vals) {
     if (photoDataURL) {
       var img = new Image();
       img.onload = function() {
+        // 1. Draw photo clipped to circle
         ctx.save();
         ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
         ctx.beginPath(); ctx.arc(info.cx, info.cy, info.cr, 0, Math.PI*2); ctx.clip();
-        // Cover crop — sem achatamento
         var d = info.cr * 2;
         var scale = Math.max(d / img.naturalWidth, d / img.naturalHeight);
         var sw2 = img.naturalWidth * scale, sh2 = img.naturalHeight * scale;
         ctx.drawImage(img, info.cx - sw2/2, info.cy - sh2/2, sw2, sh2);
         ctx.restore();
+
+        // 2. Draw crisp white border OUTSIDE the clip (on top, no jagged edges)
+        var bw = Math.round(1.5*MM);
+        ctx.beginPath(); ctx.arc(info.cx, info.cy, info.cr + bw/2, 0, Math.PI*2);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = bw;
+        ctx.stroke();
+
         finishFront(ctx, info, vals.name, vals.role);
         resolve(canvas.toDataURL('image/png'));
       };
@@ -571,24 +575,22 @@ async function downloadPDF() {
   var vals = getVals();
   var canvas = document.getElementById('exportCanvas');
 
-  var pageW = 54, pageH = 86, specH = pageH + 32;
+  var pageW = 54, pageH = 86;
 
   var frontURL = await renderFront(canvas, vals);
   var backURL  = await renderBack(canvas, vals);
 
   var jsPDF = window.jspdf.jsPDF;
-  var pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, specH] });
+  var pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, pageH] });
 
   // Pág 1 — Frente
   var frontClean = await roundedCrop(frontURL, pageW, pageH, 2);
-  pdf.addImage(frontClean, 'JPEG', 0, 0, pageW, pageH, undefined, 'NONE');
-  addFooter(pdf, pageW, pageH, vals, 'FRENTE', 'PVCL 0,76mm – BRILHO');
+  pdf.addImage(frontClean, 'PNG', 0, 0, pageW, pageH, undefined, 'NONE');
 
   // Pág 2 — Verso
-  pdf.addPage([pageW, specH]);
+  pdf.addPage([pageW, pageH]);
   var backClean = await roundedCrop(backURL, pageW, pageH, 2);
-  pdf.addImage(backClean, 'JPEG', 0, 0, pageW, pageH, undefined, 'NONE');
-  addFooter(pdf, pageW, pageH, vals, 'VERSO', 'PVCL 0,76mm – FOSCO');
+  pdf.addImage(backClean, 'PNG', 0, 0, pageW, pageH, undefined, 'NONE');
 
   pdf.setProperties({
     title: 'Crachá IB – ' + vals.type,
@@ -602,7 +604,7 @@ async function downloadPDF() {
 
 function roundedCrop(imgURL, wMM, hMM, rMM) {
   return new Promise(function(resolve) {
-    var sc = 300 / 25.4; // px per mm @ 300dpi
+    var sc = 600 / 25.4; // px per mm @ 600dpi — máxima qualidade
     var bleed = Math.round(3 * sc);
     var W = Math.round(wMM * sc);
     var H = Math.round(hMM * sc);
@@ -626,10 +628,11 @@ function roundedCrop(imgURL, wMM, hMM, rMM) {
       ctx.closePath();
       ctx.clip();
 
-      // Draw cropping the bleed from the PNG
+      // Draw cropping the bleed
       ctx.drawImage(img, bleed, bleed, img.naturalWidth - bleed*2, img.naturalHeight - bleed*2, 0, 0, W, H);
 
-      resolve(tmp.toDataURL('image/jpeg', 1.0));
+      // PNG — sem perda de qualidade
+      resolve(tmp.toDataURL('image/png'));
     };
     img.src = imgURL;
   });
