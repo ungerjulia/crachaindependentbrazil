@@ -341,9 +341,9 @@ function updatePreview() {
     document.getElementById('backLabel').textContent  = 'Admissão:';
     if (admDate) {
       var p = admDate.split('-');
-      document.getElementById('previewDate').textContent = '<' + p[2] + '/' + p[1] + '/' + p[0] + '>';
+      document.getElementById('previewDate').textContent = p[2] + '/' + p[1] + '/' + p[0];
     } else {
-      document.getElementById('previewDate').textContent = '<00/00/00>';
+      document.getElementById('previewDate').textContent = '00/00/00';
     }
   }
 }
@@ -496,7 +496,7 @@ function getVals() {
     bottomValue = cnpj || '<Número>';
   } else if (admDate) {
     var p = admDate.split('-');
-    bottomValue = '<' + p[2] + '/' + p[1] + '/' + p[0] + '>';
+    bottomValue = p[2] + '/' + p[1] + '/' + p[0];
   } else {
     bottomValue = '<00/00/00>';
   }
@@ -571,25 +571,23 @@ async function downloadPDF() {
   var vals = getVals();
   var canvas = document.getElementById('exportCanvas');
 
-  // Página exatamente 54x86mm — SEM sangria extra no PDF visual
-  // A sangria existe no PNG mas o PDF mostra o crachá limpo com cantos arredondados
-  var pageW = 54, pageH = 86;
-  var specH = pageH + 32;
+  var pageW = 54, pageH = 86, specH = pageH + 32;
 
   var frontURL = await renderFront(canvas, vals);
   var backURL  = await renderBack(canvas, vals);
 
   var jsPDF = window.jspdf.jsPDF;
-
-  // Página 1 — Frente
   var pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, specH] });
-  // Clip com cantos arredondados (raio 2mm)
-  addRoundedImageToPDF(pdf, frontURL, 0, 0, pageW, pageH, 2);
+
+  // Pág 1 — Frente
+  var frontClean = await roundedCrop(frontURL, pageW, pageH, 2);
+  pdf.addImage(frontClean, 'JPEG', 0, 0, pageW, pageH, undefined, 'NONE');
   addFooter(pdf, pageW, pageH, vals, 'FRENTE', 'PVCL 0,76mm – BRILHO');
 
-  // Página 2 — Verso
+  // Pág 2 — Verso
   pdf.addPage([pageW, specH]);
-  addRoundedImageToPDF(pdf, backURL, 0, 0, pageW, pageH, 2);
+  var backClean = await roundedCrop(backURL, pageW, pageH, 2);
+  pdf.addImage(backClean, 'JPEG', 0, 0, pageW, pageH, undefined, 'NONE');
   addFooter(pdf, pageW, pageH, vals, 'VERSO', 'PVCL 0,76mm – FOSCO');
 
   pdf.setProperties({
@@ -602,50 +600,42 @@ async function downloadPDF() {
   pdf.save('cracha-IB-' + vals.type + '-GRAFICA.pdf');
 }
 
-function addRoundedImageToPDF(pdf, imgURL, x, y, w, h, r) {
-  // Usa canvas para recortar com cantos arredondados antes de inserir no PDF
-  var tmp = document.createElement('canvas');
-  // Alta resolução: 300dpi → 1mm = 11.811px
-  var sc = 300 / 25.4;
-  tmp.width  = Math.round(w * sc);
-  tmp.height = Math.round(h * sc);
-  var ctx = tmp.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
+function roundedCrop(imgURL, wMM, hMM, rMM) {
+  return new Promise(function(resolve) {
+    var sc = 300 / 25.4; // px per mm @ 300dpi
+    var bleed = Math.round(3 * sc);
+    var W = Math.round(wMM * sc);
+    var H = Math.round(hMM * sc);
+    var R = rMM * sc;
 
-  // Rounded rect clip
-  var rr2 = r * sc;
-  ctx.beginPath();
-  ctx.moveTo(rr2, 0);
-  ctx.lineTo(tmp.width - rr2, 0);
-  ctx.quadraticCurveTo(tmp.width, 0, tmp.width, rr2);
-  ctx.lineTo(tmp.width, tmp.height - rr2);
-  ctx.quadraticCurveTo(tmp.width, tmp.height, tmp.width - rr2, tmp.height);
-  ctx.lineTo(rr2, tmp.height);
-  ctx.quadraticCurveTo(0, tmp.height, 0, tmp.height - rr2);
-  ctx.lineTo(0, rr2);
-  ctx.quadraticCurveTo(0, 0, rr2, 0);
-  ctx.closePath();
-  ctx.clip();
+    var img = new Image();
+    img.onload = function() {
+      var tmp = document.createElement('canvas');
+      tmp.width = W; tmp.height = H;
+      var ctx = tmp.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-  // Desenha a imagem — centraliza descartando a sangria (3mm cada lado)
-  // O PNG tem sangria de 3mm → precisamos cropar os 3mm de cada lado
-  var bleedMM = 3;
-  var bleedPx = bleedMM * sc;
-  var srcW = Math.round((w + bleedMM*2) * sc);
-  var srcH = Math.round((h + bleedMM*2) * sc);
+      // Rounded clip
+      ctx.beginPath();
+      ctx.moveTo(R, 0);
+      ctx.lineTo(W-R, 0); ctx.quadraticCurveTo(W, 0, W, R);
+      ctx.lineTo(W, H-R); ctx.quadraticCurveTo(W, H, W-R, H);
+      ctx.lineTo(R, H);   ctx.quadraticCurveTo(0, H, 0, H-R);
+      ctx.lineTo(0, R);   ctx.quadraticCurveTo(0, 0, R, 0);
+      ctx.closePath();
+      ctx.clip();
 
-  var img = new Image();
-  img.src = imgURL;
-  // Desenha cortando a sangria
-  ctx.drawImage(img,
-    bleedPx, bleedPx, srcW - bleedPx*2, srcH - bleedPx*2, // source crop
-    0, 0, tmp.width, tmp.height                             // destination
-  );
+      // Draw cropping the bleed from the PNG
+      ctx.drawImage(img, bleed, bleed, img.naturalWidth - bleed*2, img.naturalHeight - bleed*2, 0, 0, W, H);
 
-  var cleanURL = tmp.toDataURL('image/jpeg', 1.0);
-  pdf.addImage(cleanURL, 'JPEG', x, y, w, h, undefined, 'NONE');
+      resolve(tmp.toDataURL('image/jpeg', 1.0));
+    };
+    img.src = imgURL;
+  });
 }
+
+function addRoundedImageToPDF() {} // legacy stub, não usada
 
 function addFooter(pdf, pageW, pageH, vals, face, material) {
   var y0 = pageH + 3;
