@@ -486,8 +486,16 @@ function renderFrontToCanvas(canvas, vals) {
         ctx.save();
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.beginPath(); ctx.arc(cx, cy, cr-Math.round(0.4*MM), 0, Math.PI*2); ctx.clip();
-        ctx.drawImage(img, cx-cr+Math.round(0.4*MM), cy-cr+Math.round(0.4*MM), (cr-Math.round(0.4*MM))*2, (cr-Math.round(0.4*MM))*2);
+        ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2); ctx.clip();
+
+        // Cover crop — mantém proporção original sem achatar
+        const d = cr * 2;
+        const iw = img.naturalWidth, ih = img.naturalHeight;
+        const scale = Math.max(d / iw, d / ih);
+        const sw = iw * scale, sh = ih * scale;
+        const sx = cx - sw / 2, sy = cy - sh / 2;
+        ctx.drawImage(img, sx, sy, sw, sh);
+
         ctx.restore();
         finishFrontCanvas(ctx, cx, cy, cr, vals.name, vals.role, ox, oy);
         resolve(canvas.toDataURL('image/png'));
@@ -507,79 +515,126 @@ function renderFrontToCanvas(canvas, vals) {
 }
 
 function renderBackToCanvas(canvas, vals) {
-  canvas.width = CW; canvas.height = CH;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  drawBackCanvas(ctx, vals.color, vals.bottomLabel, vals.bottomValue);
-  return canvas.toDataURL('image/png');
+  return new Promise(resolve => {
+    canvas.width = CW; canvas.height = CH;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    drawBackCanvas(ctx, vals.color, vals.bottomLabel, vals.bottomValue);
+    resolve(canvas.toDataURL('image/png'));
+  });
 }
 
-// ── PNG Download ──────────────────────────────────────────────
+// ── PNG Download — frente e verso separados, tamanho correto ──
 async function downloadPNG() {
   const vals = getVals();
   const canvas = document.getElementById('exportCanvas');
 
-  // FRONT
+  // FRENTE
   const frontDataURL = await renderFrontToCanvas(canvas, vals);
   triggerDownload(frontDataURL, `cracha-${vals.type}-FRENTE-300dpi.png`);
 
-  // BACK (slight delay)
-  setTimeout(() => {
-    const backDataURL = renderBackToCanvas(canvas, vals);
-    triggerDownload(backDataURL, `cracha-${vals.type}-VERSO-300dpi.png`);
-  }, 400);
+  // VERSO — aguarda 800ms para não bloquear o browser
+  await new Promise(r => setTimeout(r, 800));
+  const backDataURL = await renderBackToCanvas(canvas, vals);
+  triggerDownload(backDataURL, `cracha-${vals.type}-VERSO-300dpi.png`);
 }
 
 function triggerDownload(dataURL, filename) {
   const link = document.createElement('a');
   link.download = filename;
   link.href = dataURL;
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 }
 
-// ── PDF Download ──────────────────────────────────────────────
+// ── PDF Download — frente + verso + rodapé de especificações ──
 async function downloadPDF() {
   const vals = getVals();
   const canvas = document.getElementById('exportCanvas');
 
-  // mm dimensions with bleed
-  const pageW = 60; // 54 + 3+3
-  const pageH = 92; // 86 + 3+3
+  const pageW = 60; // 54mm + 3mm sangria cada lado
+  const pageH = 92; // 86mm + 3mm sangria cada lado
 
   const { jsPDF } = window.jspdf;
 
-  // Render front
   const frontDataURL = await renderFrontToCanvas(canvas, vals);
-  // Render back
-  const backDataURL = renderBackToCanvas(canvas, vals);
+  const backDataURL  = await renderBackToCanvas(canvas, vals);
 
-  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, pageH] });
+  // Página de especificações: crachá + 30mm rodapé
+  const specH = pageH + 30;
+  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, specH] });
 
-  // Page 1: Front
-  pdf.addImage(frontDataURL, 'PNG', 0, 0, pageW, pageH, undefined, 'FAST');
-
-  // Crop mark lines on PDF (thin gray)
-  pdf.setDrawColor(180); pdf.setLineWidth(0.1);
-  // bleed guide box
+  // ── Página 1: Frente ──
+  pdf.addImage(frontDataURL, 'PNG', 0, 0, pageW, pageH, undefined, 'NONE');
+  // Guia de corte
+  pdf.setDrawColor(160); pdf.setLineWidth(0.15);
   pdf.rect(3, 3, 54, 86);
+  // Rodapé de specs
+  addSpecsFooter(pdf, pageW, pageH, vals.type, 'FRENTE', 'PVCL 0,76mm – BRILHO');
 
-  // Page 2: Back
-  pdf.addPage([pageW, pageH]);
-  pdf.addImage(backDataURL, 'PNG', 0, 0, pageW, pageH, undefined, 'FAST');
-  pdf.setDrawColor(180); pdf.setLineWidth(0.1);
+  // ── Página 2: Verso ──
+  pdf.addPage([pageW, specH]);
+  pdf.addImage(backDataURL, 'PNG', 0, 0, pageW, pageH, undefined, 'NONE');
+  pdf.setDrawColor(160); pdf.setLineWidth(0.15);
   pdf.rect(3, 3, 54, 86);
+  addSpecsFooter(pdf, pageW, pageH, vals.type, 'VERSO', 'PVCL 0,76mm – FOSCO');
 
-  // Metadata
   pdf.setProperties({
     title: `Crachá IB – ${vals.type}`,
-    subject: 'Crachá Independent Brazil – Arquivo para gráfica',
+    subject: 'Independent Brazil – Arquivo para gráfica',
     author: 'Independent Brazil',
     keywords: `cracha,${vals.type},grafica,300dpi,PVCL`,
     creator: 'Crachá IB App'
   });
 
   pdf.save(`cracha-IB-${vals.type}-GRAFICA.pdf`);
+}
+
+function addSpecsFooter(pdf, pageW, pageH, type, face, material) {
+  const y0 = pageH + 3; // início do rodapé
+  const cx = pageW / 2;
+
+  // Linha separadora
+  pdf.setDrawColor(180); pdf.setLineWidth(0.2);
+  pdf.line(3, y0, pageW - 3, y0);
+
+  // Título
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(5);
+  pdf.setTextColor(30);
+  pdf.text(`${type} | ${face}`, cx, y0 + 4, { align: 'center' });
+
+  // Specs em grade
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(4);
+  pdf.setTextColor(80);
+
+  const specs = [
+    ['Material', material],
+    ['Dimensões', '54 × 86 mm'],
+    ['Sangria', '3 mm (todos os lados)'],
+    ['Resolução', '300 dpi'],
+    ['Tamanho final', '708 × 1086 px'],
+    ['Cor', type === 'CLT' ? 'Preto' : 'Cinza'],
+  ];
+
+  const colW = pageW / 2 - 4;
+  specs.forEach(([label, value], i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const x = col === 0 ? 4 : cx + 2;
+    const y = y0 + 9 + row * 5.5;
+    pdf.setFont('helvetica', 'bold'); pdf.setTextColor(30);
+    pdf.text(label + ':', x, y);
+    pdf.setFont('helvetica', 'normal'); pdf.setTextColor(80);
+    pdf.text(value, x + 14, y);
+  });
+
+  // Assinatura
+  pdf.setFontSize(3.5); pdf.setTextColor(150);
+  pdf.text('Gerado por Crachá IB App · Independent Brazil', cx, y0 + 27, { align: 'center' });
 }
 
 updatePreview();
