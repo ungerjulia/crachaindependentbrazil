@@ -139,9 +139,6 @@ canvas{display:none;}
   <button class="tbtn lock-btn" id="btnStabilize" onclick="stabilize()">&#x1F512;&nbsp;Estabilizar</button><button class="tbtn edit-btn" id="btnEdit" onclick="editMode()" style="display:none">&#x270F;&nbsp;Editar</button>
   <button class="tbtn" onclick="resetLayout()">&#x21BA; Reset</button>
   <div class="sep"></div>
-  <button class="tbtn" onclick="exportLayout()" title="Exportar layout como arquivo JSON">&#x1F4E4; Exportar</button>
-  <label class="tbtn" style="cursor:pointer;" title="Importar layout de arquivo JSON"><input type="file" id="importFile" accept=".json" onchange="importLayout(event)" style="display:none">&#x1F4E5; Importar</label>
-  <div class="sep"></div>
   <button class="tbtn" onclick="syncSave()" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700;" title="Salvar na nuvem — acessivel em qualquer maquina">&#x2601; Salvar Nuvem</button>
   <button class="tbtn" onclick="syncLoad()" style="background:#0ea5e9;color:#fff;border-color:#0ea5e9;font-weight:700;" title="Carregar da nuvem">&#x21E9; Carregar Nuvem</button>
   <span id="syncStatus" style="font-size:10px;color:#888;letter-spacing:1px;"></span>
@@ -496,53 +493,124 @@ function gerarCracha(){
   btn.textContent='&#x2713; Pronto!';
   setTimeout(function(){btn.innerHTML='&#x2713; Gerar Cracha';},1500);
 }
-// ── CLOUD SYNC via Artifact Storage ─────────────────
-var STORAGE_KEY = 'cracha-ib-layout-v1';
+// ── CLOUD SYNC via jsonblob.com ─────────────────────
+// Zero setup — public free REST storage
+var BLOB_BASE = 'https://jsonblob.com/api/jsonBlob';
+var blobId = null;
+try{ blobId = localStorage.getItem('ibBlobId'); }catch(e){}
 
 function syncStatus(msg, color){
   var el=document.getElementById('syncStatus');
   if(!el)return;
   el.textContent=msg;
   el.style.color=color||'#888';
-  if(msg) setTimeout(function(){el.textContent='';},3000);
+  if(msg) setTimeout(function(){el.textContent='';},5000);
 }
 
 async function syncSave(){
-  // Get current layout
   var raw;
   try{raw=localStorage.getItem('ibLayout');}catch(e){}
   if(!raw){ saveLayout(); try{raw=localStorage.getItem('ibLayout');}catch(e){} }
-  if(!raw){syncStatus('Nada para salvar','#e55');return;}
-  syncStatus('Salvando...','#888');
+  if(!raw){syncStatus('Estabilize antes de salvar','#e55');return;}
+  syncStatus('Salvando na nuvem...','#888');
   try{
-    var result = await window.storage.set(STORAGE_KEY, raw, true); // shared=true
-    if(result){
-      syncStatus('✓ Salvo na nuvem!','#22c55e');
+    if(blobId){
+      // Update existing blob
+      var res = await fetch(BLOB_BASE+'/'+blobId,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:raw
+      });
+      if(res.ok){
+        syncStatus('✓ Nuvem atualizada!','#22c55e');
+      } else {
+        blobId=null; localStorage.removeItem('ibBlobId'); await syncSave();
+      }
     } else {
-      syncStatus('Erro ao salvar','#e55');
+      // Create new blob
+      var res = await fetch(BLOB_BASE,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:raw
+      });
+      if(res.ok){
+        // ID is in Location header: https://jsonblob.com/api/jsonBlob/ID
+        var loc = res.headers.get('Location')||'';
+        var newId = loc.split('/').pop();
+        if(newId){
+          blobId=newId;
+          try{localStorage.setItem('ibBlobId',newId);}catch(e){}
+          syncStatus('✓ Salvo! ID: '+newId,'#22c55e');
+          showBlobId(newId);
+        } else {
+          syncStatus('Salvo mas ID nao encontrado','#e88');
+        }
+      } else {
+        syncStatus('Erro ao salvar na nuvem','#e55');
+      }
     }
   }catch(err){
-    syncStatus('Erro: '+err.message,'#e55');
+    syncStatus('Sem conexao. Use Exportar/Importar.','#e55');
   }
 }
 
 async function syncLoad(){
-  syncStatus('Carregando...','#888');
+  var id = blobId;
+  if(!id){
+    id = prompt('Cole o ID da nuvem (gerado ao salvar pela primeira vez):');
+    if(!id||!id.trim()){syncStatus('Cancelado','#e88');return;}
+    id = id.trim();
+  }
+  syncStatus('Carregando da nuvem...','#888');
   try{
-    var result = await window.storage.get(STORAGE_KEY, true); // shared=true
-    if(!result){syncStatus('Nenhum layout na nuvem','#e88');return;}
-    var layout=JSON.parse(result.value);
-    if(!layout.elements){syncStatus('Layout invalido','#e55');return;}
-    localStorage.setItem('ibLayout', result.value);
+    var res = await fetch(BLOB_BASE+'/'+id,{
+      headers:{'Accept':'application/json'}
+    });
+    if(!res.ok){syncStatus('ID invalido ou expirado','#e55');blobId=null;localStorage.removeItem('ibBlobId');return;}
+    var layout = await res.json();
+    if(!layout||!layout.elements){syncStatus('Dados invalidos','#e55');return;}
+    blobId=id;
+    try{localStorage.setItem('ibBlobId',id);localStorage.setItem('ibLayout',JSON.stringify(layout));}catch(e){}
     restoreLayout();
     syncStatus('✓ Layout carregado!','#22c55e');
   }catch(err){
     syncStatus('Erro: '+err.message,'#e55');
   }
 }
-// ────────────────────────────────────────────────────
 
-// ── LAYOUT EXPORT / IMPORT ──────────────────────────
+function showBlobId(id){
+  var existing=document.getElementById('blobIdBox');
+  if(existing)existing.remove();
+  var box=document.createElement('div');
+  box.id='blobIdBox';
+  box.style.cssText='position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:18px 22px;border-radius:6px;z-index:9999;font-size:12px;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.5);';
+  var lbl=document.createElement('div');
+  lbl.style.cssText='font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:8px;';
+  lbl.textContent='ID da Nuvem — use em qualquer maquina';
+  var idTxt=document.createElement('div');
+  idTxt.style.cssText='font-family:monospace;font-size:14px;color:#63b3ed;word-break:break-all;margin-bottom:12px;padding:8px;background:#111;border-radius:3px;';
+  idTxt.textContent=id;
+  var copyBtn=document.createElement('button');
+  copyBtn.id='copyBtn';
+  copyBtn.textContent='Copiar ID';
+  copyBtn.style.cssText='padding:7px 16px;background:#63b3ed;color:#000;border:none;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:1px;text-transform:uppercase;border-radius:3px;';
+  copyBtn.onclick=function(){
+    navigator.clipboard.writeText(id).then(function(){
+      copyBtn.textContent='✓ Copiado!';
+      setTimeout(function(){copyBtn.textContent='Copiar ID';},2000);
+    });
+  };
+  var closeBtn=document.createElement('button');
+  closeBtn.textContent='Fechar';
+  closeBtn.style.cssText='padding:7px 14px;background:transparent;color:#888;border:1px solid #444;font-size:10px;cursor:pointer;margin-left:6px;border-radius:3px;';
+  closeBtn.onclick=function(){box.remove();};
+  box.appendChild(lbl);
+  box.appendChild(idTxt);
+  box.appendChild(copyBtn);
+  box.appendChild(closeBtn);
+  document.body.appendChild(box);
+}
+// ────────────────────────────────────────────────────// ── LAYOUT EXPORT / IMPORT ──────────────────────────
 function exportLayout(){
   var raw;
   try{raw=localStorage.getItem('ibLayout');}catch(e){}
