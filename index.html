@@ -139,6 +139,13 @@ canvas{display:none;}
   <button class="tbtn lock-btn" id="btnStabilize" onclick="stabilize()">&#x1F512;&nbsp;Estabilizar</button><button class="tbtn edit-btn" id="btnEdit" onclick="editMode()" style="display:none">&#x270F;&nbsp;Editar</button>
   <button class="tbtn" onclick="resetLayout()">&#x21BA; Reset</button>
   <div class="sep"></div>
+  <button class="tbtn" onclick="exportLayout()" title="Exportar layout como arquivo JSON">&#x1F4E4; Exportar</button>
+  <label class="tbtn" style="cursor:pointer;" title="Importar layout de arquivo JSON"><input type="file" id="importFile" accept=".json" onchange="importLayout(event)" style="display:none">&#x1F4E5; Importar</label>
+  <div class="sep"></div>
+  <button class="tbtn" onclick="syncSave()" style="background:#7c3aed;color:#fff;border-color:#7c3aed;font-weight:700;" title="Salvar na nuvem — acessivel em qualquer maquina">&#x2601; Salvar Nuvem</button>
+  <button class="tbtn" onclick="syncLoad()" style="background:#0ea5e9;color:#fff;border-color:#0ea5e9;font-weight:700;" title="Carregar da nuvem">&#x21E9; Carregar Nuvem</button>
+  <span id="syncStatus" style="font-size:10px;color:#888;letter-spacing:1px;"></span>
+  <div class="sep"></div>
   <button class="tbtn" id="btnGerar" onclick="gerarCracha()" style="background:#22c55e;color:#fff;border-color:#22c55e;font-weight:700;">&#x2713; Gerar Cracha</button>
   <div class="sep"></div>
   <button class="tbtn primary" onclick="dlPDF()">&#x2193; PDF Grafica</button>
@@ -489,35 +496,171 @@ function gerarCracha(){
   btn.textContent='&#x2713; Pronto!';
   setTimeout(function(){btn.innerHTML='&#x2713; Gerar Cracha';},1500);
 }
+// ── CLOUD SYNC via Artifact Storage ─────────────────
+var STORAGE_KEY = 'cracha-ib-layout-v1';
+
+function syncStatus(msg, color){
+  var el=document.getElementById('syncStatus');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=color||'#888';
+  if(msg) setTimeout(function(){el.textContent='';},3000);
+}
+
+async function syncSave(){
+  // Get current layout
+  var raw;
+  try{raw=localStorage.getItem('ibLayout');}catch(e){}
+  if(!raw){ saveLayout(); try{raw=localStorage.getItem('ibLayout');}catch(e){} }
+  if(!raw){syncStatus('Nada para salvar','#e55');return;}
+  syncStatus('Salvando...','#888');
+  try{
+    var result = await window.storage.set(STORAGE_KEY, raw, true); // shared=true
+    if(result){
+      syncStatus('✓ Salvo na nuvem!','#22c55e');
+    } else {
+      syncStatus('Erro ao salvar','#e55');
+    }
+  }catch(err){
+    syncStatus('Erro: '+err.message,'#e55');
+  }
+}
+
+async function syncLoad(){
+  syncStatus('Carregando...','#888');
+  try{
+    var result = await window.storage.get(STORAGE_KEY, true); // shared=true
+    if(!result){syncStatus('Nenhum layout na nuvem','#e88');return;}
+    var layout=JSON.parse(result.value);
+    if(!layout.elements){syncStatus('Layout invalido','#e55');return;}
+    localStorage.setItem('ibLayout', result.value);
+    restoreLayout();
+    syncStatus('✓ Layout carregado!','#22c55e');
+  }catch(err){
+    syncStatus('Erro: '+err.message,'#e55');
+  }
+}
+// ────────────────────────────────────────────────────
+
+// ── LAYOUT EXPORT / IMPORT ──────────────────────────
+function exportLayout(){
+  var raw;
+  try{raw=localStorage.getItem('ibLayout');}catch(e){}
+  if(!raw){
+    // Save current state first even if not stabilized
+    saveLayout();
+    try{raw=localStorage.getItem('ibLayout');}catch(e){}
+  }
+  if(!raw){alert('Nenhum layout para exportar. Estabilize primeiro.');return;}
+  var blob=new Blob([raw],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='cracha-ib-layout.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function importLayout(e){
+  var file=e.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var layout=JSON.parse(ev.target.result);
+      if(!layout.elements){alert('Arquivo de layout invalido.');return;}
+      localStorage.setItem('ibLayout',JSON.stringify(layout));
+      restoreLayout();
+      // Reset file input so same file can be re-imported
+      document.getElementById('importFile').value='';
+      // Flash feedback
+      var btn=document.getElementById('btnGerar');
+      var orig=btn.innerHTML;
+      btn.innerHTML='&#x2713; Layout importado!';
+      setTimeout(function(){btn.innerHTML=orig;},2000);
+    }catch(err){alert('Erro ao importar layout: '+err.message);}
+  };
+  reader.readAsText(file);
+}
+// ────────────────────────────────────────────────────
+
+// ── LAYOUT PERSISTENCE ──────────────────────────────
+var SAVE_IDS=['elPhoto','elBrand','elName','elRole','elLogo','elAdmLabel','elAdmVal','elSite'];
+var STYLE_PROPS=['left','top','right','bottom','width','height','fontSize','fontWeight','color','letterSpacing','textTransform','opacity','transform'];
+
+function saveLayout(){
+  var layout={locked:true,elements:{}};
+  SAVE_IDS.forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el)return;
+    var s={};
+    STYLE_PROPS.forEach(function(p){if(el.style[p])s[p]=el.style[p];});
+    layout.elements[id]=s;
+  });
+  try{localStorage.setItem('ibLayout',JSON.stringify(layout));}catch(e){}
+}
+
+function restoreLayout(){
+  var raw;
+  try{raw=localStorage.getItem('ibLayout');}catch(e){}
+  if(!raw)return;
+  var layout=JSON.parse(raw);
+  SAVE_IDS.forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el||!layout.elements[id])return;
+    var s=layout.elements[id];
+    // Clear all first
+    STYLE_PROPS.forEach(function(p){el.style[p]='';});
+    // Apply saved
+    Object.keys(s).forEach(function(p){el.style[p]=s[p];});
+  });
+  if(layout.locked){
+    // Apply locked state UI
+    document.querySelectorAll('.badge').forEach(function(b){b.classList.add('locked');});
+    document.querySelectorAll('.resize-handle').forEach(function(rh){rh.style.display='none';});
+    document.getElementById('btnStabilize').style.display='none';
+    document.getElementById('btnEdit').style.display='';
+  }
+}
+
+function clearLayout(){
+  try{localStorage.removeItem('ibLayout');}catch(e){}
+}
+// ────────────────────────────────────────────────────
+
 function stabilize(){
   // Lock ONLY drag/resize interactions — data fields remain fully editable
   document.querySelectorAll('.badge').forEach(function(b){b.classList.add('locked');});
   document.querySelectorAll('.el,.el-photo').forEach(function(el){el.classList.remove('selected');});
   document.getElementById('elControls').classList.remove('visible');
-  // Also hide resize handles
   document.querySelectorAll('.resize-handle').forEach(function(rh){rh.style.display='none';});
   selectedEl=null;
   document.getElementById('btnStabilize').style.display='none';
   document.getElementById('btnEdit').style.display='';
+  saveLayout(); // persist positions
 }
 function editMode(){
   document.querySelectorAll('.badge').forEach(function(b){b.classList.remove('locked');});
   document.querySelectorAll('.resize-handle').forEach(function(rh){rh.style.display='';});
   document.getElementById('btnStabilize').style.display='';
   document.getElementById('btnEdit').style.display='none';
+  // Update saved layout to unlocked state
+  try{
+    var raw=localStorage.getItem('ibLayout');
+    if(raw){var l=JSON.parse(raw);l.locked=false;localStorage.setItem('ibLayout',JSON.stringify(l));}
+  }catch(e){}
 }
 function resetLayout(){
-  // restore default positions/sizes
+  clearLayout(); // clear persisted layout
   Object.keys(defaultStyles).forEach(function(id){
     var el=document.getElementById(id);
     if(!el)return;
     var s=defaultStyles[id];
     Object.keys(s).forEach(function(k){ el.style[k]=s[k]; });
-    // clear overrides
     if(!s.right) el.style.right='';
     if(!s.bottom) el.style.bottom='';
     el.style.transform='';
   });
+  // Restore edit mode
+  editMode();
   selectEl(null);
 }
 
@@ -607,6 +750,7 @@ function rdj(){
 function zm(d){A.s=Math.min(3,Math.max(0.5,A.s+d));document.getElementById('zSlider').value=A.s;rdj();}
 function zTo(v){A.s=v;rdj();}
 document.addEventListener('DOMContentLoaded',function(){
+  restoreLayout(); // restore persisted layout on page load
   var c=document.getElementById('adjCircle');
   c.addEventListener('mousedown',function(e){A.d=true;A.sx=e.clientX;A.sy=e.clientY;A.ox=A.x;A.oy=A.y;e.preventDefault();});
   document.addEventListener('mousemove',function(e){if(!A.d)return;A.x=A.ox+(e.clientX-A.sx);A.y=A.oy+(e.clientY-A.sy);rdj();});
