@@ -69,8 +69,9 @@ input[type=text]:focus,input[type=date]:focus{border-color:#000;}
 .el-controls{background:#f8f8f8;border:1px solid var(--border);padding:12px;margin-bottom:16px;display:none;}
 .el-controls.visible{display:block;}
 .el-ctrl-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;}
-.ctrl-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.ctrl-row label{font-size:9px;color:var(--gray);width:60px;flex-shrink:0;}
+.ctrl-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.ctrl-row label{font-size:9px;color:var(--gray);width:52px;flex-shrink:0;letter-spacing:.5px;text-transform:uppercase;}
+
 .ctrl-row input[type=range]{flex:1;accent-color:#000;}
 .ctrl-row input[type=color]{width:32px;height:24px;border:1px solid var(--border);padding:0;cursor:pointer;}
 .ctrl-row .val{font-size:10px;color:#000;width:28px;text-align:right;}
@@ -152,19 +153,19 @@ canvas{display:none;}
       <div class="lp-title">Elemento Selecionado</div>
       <div class="el-controls" id="elControls">
         <div class="el-ctrl-title" id="elCtrlTitle">Nenhum</div>
-        <div class="ctrl-row">
+        <div class="ctrl-row text-ctrl-row">
           <label>Tamanho</label>
           <input type="range" id="ctrlSize" min="6" max="60" value="14" oninput="applyCtrl('size',+this.value);document.getElementById('ctrlSizeV').textContent=this.value">
           <span class="val" id="ctrlSizeV">14</span>
         </div>
-        <div class="ctrl-row">
+        <div class="ctrl-row text-ctrl-row">
           <label>Cor</label>
           <input type="color" id="ctrlColor" value="#ffffff" oninput="applyCtrl('color',this.value)">
           <label style="margin-left:8px">Opac.</label>
           <input type="range" id="ctrlOpacity" min="10" max="100" value="100" oninput="applyCtrl('opacity',+this.value);document.getElementById('ctrlOpV').textContent=this.value+'%'">
           <span class="val" id="ctrlOpV">100%</span>
         </div>
-        <div class="ctrl-row">
+        <div class="ctrl-row text-ctrl-row">
           <label>Peso</label>
           <select id="ctrlWeight" onchange="applyCtrl('weight',this.value)">
             <option value="300">Light</option>
@@ -173,7 +174,7 @@ canvas{display:none;}
             <option value="700">Bold</option>
           </select>
         </div>
-        <div class="ctrl-row">
+        <div class="ctrl-row text-ctrl-row">
           <label>Caso</label>
           <div class="case-row" style="flex:1">
             <button class="cbtn" id="caseNone" onclick="applyCtrl('case','none')">Aa</button>
@@ -181,7 +182,7 @@ canvas{display:none;}
             <button class="cbtn" id="caseLower" onclick="applyCtrl('case','lower')">aa</button>
           </div>
         </div>
-        <div class="ctrl-row">
+        <div class="ctrl-row text-ctrl-row">
           <label>Letra</label>
           <input type="range" id="ctrlSpacing" min="-2" max="10" step="0.5" value="0" oninput="applyCtrl('spacing',+this.value);document.getElementById('ctrlSpV').textContent=this.value">
           <span class="val" id="ctrlSpV">0</span>
@@ -426,8 +427,12 @@ function selectEl(el){
   if(!el){ctrl.classList.remove('visible');return;}
   el.classList.add('selected');
   ctrl.classList.add('visible');
-  document.getElementById('elCtrlTitle').textContent=el.id;
-  // populate controls
+  var names={elBrand:'Logo Frente',elName:'Nome',elRole:'Funcao',elLogo:'Logo IB',elAdmLabel:'Label',elAdmVal:'Data / CNPJ',elSite:'Website',elPhoto:'Foto'};
+  document.getElementById('elCtrlTitle').textContent=names[el.id]||el.id;
+  // Hide all text controls for image elements
+  var isImg=!!el.querySelector('img');
+  document.querySelectorAll('.text-ctrl-row').forEach(function(r){r.style.display=isImg?'none':'flex';});
+  if(isImg) return;
   var fs=parseFloat(el.style.fontSize)||10;
   document.getElementById('ctrlSize').value=fs;
   document.getElementById('ctrlSizeV').textContent=Math.round(fs);
