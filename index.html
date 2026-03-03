@@ -738,20 +738,11 @@ async function renderFront(canvas){
     var logoImg=new Image();
     logoImg.src=LOGO_B64;
     await new Promise(function(r){if(logoImg.complete)r();else logoImg.onload=r;});
-    // Draw logo inverted: white on dark — logo is dark text on white, need to invert
-    // Use composite to draw white version
+    // PNG already has transparent background + white text — draw directly
     ctx.save();
-    ctx.globalCompositeOperation='screen';
-    // Draw dark logo then invert via screen blend
-    var ltmp=document.createElement('canvas');
-    ltmp.width=Math.round(bimgW);ltmp.height=Math.round(bimgH);
-    var lctx=ltmp.getContext('2d');
-    lctx.drawImage(logoImg,0,0,ltmp.width,ltmp.height);
-    // Invert: draw white rect then XOR
-    lctx.globalCompositeOperation='difference';
-    lctx.fillStyle='white';
-    lctx.fillRect(0,0,ltmp.width,ltmp.height);
-    ctx.drawImage(ltmp,bimgX,bimgY,bimgW,bimgH);
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(logoImg,bimgX,bimgY,bimgW,bimgH);
     ctx.restore();
 
     // Photo
