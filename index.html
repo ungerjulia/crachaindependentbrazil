@@ -3,667 +3,240 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crachá IB</title>
+<title>Cracha IB</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@300;400;500;700&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  :root {
-    --black: #1a1a1a; --white: #ffffff;
-    --border: #e0e0e0; --mid-gray: #888;
-    --clt: #111111; --pj: #5a5a5a;
-  }
-  body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#f5f5f5; color:var(--black); min-height:100vh; }
-
-  /* HEADER */
-  header { background:var(--black); padding:20px 40px; display:flex; align-items:center; gap:16px; }
-  .logo-box { width:40px; height:40px; background:#fff; display:flex; align-items:center; justify-content:center; position:relative; }
-  .logo-box::before { content:''; position:absolute; inset:4px; border:2px solid var(--black); }
-  .logo-box span { font-size:14px; font-weight:700; color:var(--black); position:relative; z-index:1; }
-  header h1 { color:#fff; font-size:16px; font-weight:300; letter-spacing:3px; text-transform:uppercase; }
-
-  /* LAYOUT */
-  .container { max-width:1100px; margin:0 auto; padding:48px 32px; display:grid; grid-template-columns:360px 1fr; gap:48px; align-items:start; }
-
-  /* FORM */
-  .form-panel { background:white; padding:36px; border:1px solid var(--border); }
-  .form-panel h2 { font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:32px; padding-bottom:16px; border-bottom:1px solid var(--border); }
-  .field { margin-bottom:24px; }
-  .field > label { display:block; font-size:10px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid-gray); margin-bottom:8px; }
-  input[type="text"], input[type="date"] { width:100%; padding:12px 0; border:none; border-bottom:1.5px solid var(--border); background:transparent; font-family:inherit; font-size:15px; color:var(--black); outline:none; transition:border-color 0.2s; }
-  input[type="text"]:focus, input[type="date"]:focus { border-color:var(--black); }
-
-  /* TYPE SELECTOR */
-  .type-selector { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
-  .type-option { cursor:pointer; position:relative; }
-  .type-option input { position:absolute; opacity:0; pointer-events:none; }
-  .type-swatch { padding:12px; border:1.5px solid var(--border); text-align:center; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; font-weight:500; transition:all 0.2s; color:var(--mid-gray); }
-  .type-option input:checked + .type-swatch { border-color:var(--black); color:var(--black); background:#fafafa; }
-
-  /* PHOTO UPLOAD */
-  .photo-upload { border:1.5px dashed var(--border); padding:24px; text-align:center; cursor:pointer; transition:border-color 0.2s; position:relative; overflow:hidden; margin-bottom:8px; }
-  .photo-upload:hover { border-color:var(--black); }
-  .photo-upload input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
-  .photo-preview { width:80px; height:80px; border-radius:50%; object-fit:cover; margin:0 auto 8px; display:none; }
-  .upload-icon { font-size:24px; margin-bottom:8px; display:block; color:var(--mid-gray); }
-  .upload-text { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--mid-gray); }
-
-  /* PHOTO QUALITY */
-  .photo-quality { margin-bottom:20px; padding:10px 14px; font-size:11px; display:none; border-left:3px solid; }
-  .photo-quality.ok   { border-color:#2e7d32; background:#f1f8e9; color:#2e7d32; }
-  .photo-quality.warn { border-color:#e65100; background:#fff3e0; color:#e65100; }
-  .photo-quality.bad  { border-color:#c62828; background:#ffebee; color:#c62828; }
-
-  /* NAME/ROLE WITH CASE TOGGLE */
-  .input-with-toggle { display:flex; align-items:flex-end; gap:8px; border-bottom:1.5px solid var(--border); transition:border-color 0.2s; }
-  .input-with-toggle:focus-within { border-color:var(--black); }
-  .input-with-toggle input { border-bottom:none !important; flex:1; padding-bottom:10px; text-transform:none; }
-  .case-toggle { flex-shrink:0; padding:0 0 10px; background:none; border:none; font-family:inherit; font-size:10px; font-weight:700; color:var(--mid-gray); cursor:pointer; transition:color 0.2s; text-transform:none; }
-  .case-toggle.active { color:var(--black); }
-  .case-toggle:hover { color:var(--black); }
-
-  /* BUTTONS */
-  .btn-generate { width:100%; padding:16px; background:var(--black); color:white; border:none; font-family:inherit; font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; cursor:pointer; transition:opacity 0.2s; margin-bottom:12px; }
-  .btn-generate:hover { opacity:0.8; }
-  .export-btns { display:none; gap:10px; margin-bottom:0; }
-  .export-btns.visible { display:grid; grid-template-columns:1fr 1fr; }
-  .btn-export { padding:13px 8px; font-family:inherit; font-size:10px; font-weight:500; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; border:1.5px solid var(--black); background:transparent; color:var(--black); }
-  .btn-export:hover { background:var(--black); color:white; }
-  .btn-export.primary { background:var(--black); color:white; }
-  .btn-export.primary:hover { opacity:0.8; }
-
-  /* PREVIEW PANEL */
-  .preview-panel { display:flex; flex-direction:column; gap:32px; }
-  .preview-panel h2 { font-size:11px; font-weight:500; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); padding-bottom:16px; border-bottom:1px solid var(--border); }
-  .cards-row { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
-  .card-group { display:flex; flex-direction:column; align-items:center; gap:10px; }
-  .card-label-small { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--mid-gray); text-align:center; }
-
-  /* SPECS BAR */
-  .specs-info { background:white; border:1px solid var(--border); padding:18px 24px; display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-  .spec { text-align:center; }
-  .spec-value { font-size:14px; font-weight:400; letter-spacing:0.5px; }
-  .spec-key { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--mid-gray); margin-top:3px; }
-
-  /* PRINT NOTE */
-  .print-note { background:#f9f9f9; border:1px solid var(--border); padding:16px 20px; font-size:11px; color:var(--mid-gray); line-height:1.7; }
-  .print-note strong { color:var(--black); }
-
-  /* BADGE PREVIEW — 54x86mm ratio */
-  .badge { width:190px; height:303px; border-radius:10px; overflow:hidden; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.25); flex-shrink:0; }
-  .badge-slot { position:absolute; top:11px; left:50%; transform:translateX(-50%); width:44px; height:12px; background:rgba(0,0,0,0.5); border-radius:6px; z-index:10; }
-
-  /* FRONT */
-  .badge-front { display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:30px 12px 18px; height:100%; background:var(--clt); }
-  .badge-front.pj { background:var(--pj); }
-  .badge-brand { font-size:10.5px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:white; text-align:center; line-height:1.35; flex-shrink:0; }
-  .badge-photo-ring { width:120px; height:120px; border-radius:50%; border:3px solid white; display:flex; align-items:center; justify-content:center; overflow:hidden; background:rgba(255,255,255,0.12); flex-shrink:0; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
-  .badge-photo-ring img { width:100%; height:100%; object-fit:cover; display:none; }
-  .badge-photo-placeholder { display:flex; flex-direction:column; align-items:center; gap:3px; }
-  .badge-photo-placeholder svg { width:60px; height:60px; fill:rgba(255,255,255,0.45); }
-  .badge-photo-size { font-size:7px; color:rgba(255,255,255,0.3); letter-spacing:1px; }
-  .badge-info { text-align:center; flex-shrink:0; }
-  .badge-name { font-size:9.5px; font-weight:700; color:white; letter-spacing:0.5px; margin-bottom:3px; word-break:break-word; text-align:center; line-height:1.4; max-width:160px; }
-  .badge-role { font-size:8px; color:rgba(255,255,255,0.55); letter-spacing:0.5px; word-break:break-word; text-align:center; line-height:1.4; max-width:160px; }
-
-  /* BACK */
-  .badge-back { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:16px 14px; height:100%; background:var(--clt); }
-  .badge-back.pj { background:var(--pj); }
-  .badge-logo-box { width:90px; height:90px; border:6px solid white; display:flex; align-items:center; justify-content:center; }
-  .badge-logo-text { font-size:50px; font-weight:700; color:white; letter-spacing:-2px; line-height:1; }
-  .badge-back-bottom { text-align:center; }
-  .badge-admission-label { font-size:7px; color:rgba(255,255,255,0.45); margin-bottom:2px; }
-  .badge-admission-date { font-size:9px; font-weight:700; color:white; margin-bottom:5px; }
-  .badge-website { font-size:7px; font-weight:700; color:white; }
-
-  canvas { display:none; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--black:#1a1a1a;--white:#fff;--border:#e0e0e0;--gray:#888;--badge:#111111;}
+body{font-family:'Inter',Helvetica,Arial,sans-serif;background:#f5f5f5;color:var(--black);min-height:100vh;}
+header{background:var(--black);padding:20px 40px;display:flex;align-items:center;gap:16px;}
+.logo-box{width:40px;height:40px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative;}
+.logo-box::before{content:'';position:absolute;inset:4px;border:2px solid var(--black);}
+.logo-box span{font-size:14px;font-weight:700;color:var(--black);position:relative;z-index:1;}
+header h1{color:#fff;font-size:16px;font-weight:300;letter-spacing:3px;text-transform:uppercase;}
+.container{max-width:1100px;margin:0 auto;padding:48px 32px;display:grid;grid-template-columns:370px 1fr;gap:48px;align-items:start;}
+.form-panel{background:white;padding:36px;border:1px solid var(--border);}
+.form-panel h2{font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--gray);margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.field{margin-bottom:22px;}
+.field>label{display:block;font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:8px;}
+input[type=text],input[type=date]{width:100%;padding:10px 0;border:none;border-bottom:1.5px solid var(--border);background:transparent;font-family:inherit;font-size:15px;color:var(--black);outline:none;transition:border-color .2s;text-transform:none;}
+input[type=text]:focus,input[type=date]:focus{border-color:var(--black);}
+.type-sel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;}
+.type-opt{cursor:pointer;position:relative;}
+.type-opt input{position:absolute;opacity:0;pointer-events:none;}
+.type-sw{padding:12px;border:1.5px solid var(--border);text-align:center;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;transition:all .2s;color:var(--gray);}
+.type-opt input:checked+.type-sw{border-color:var(--black);color:var(--black);background:#fafafa;}
+.photo-upload{border:1.5px dashed var(--border);padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden;}
+.photo-upload:hover{border-color:var(--black);}
+.photo-upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.up-thumb{width:68px;height:68px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:none;}
+.up-icon{font-size:22px;margin-bottom:6px;display:block;color:var(--gray);}
+.up-text{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gray);}
+.pq{margin-top:8px;padding:8px 12px;font-size:11px;display:none;border-left:3px solid;}
+.pq.ok{border-color:#2e7d32;background:#f1f8e9;color:#2e7d32;}
+.pq.warn{border-color:#e65100;background:#fff3e0;color:#e65100;}
+.pq.bad{border-color:#c62828;background:#ffebee;color:#c62828;}
+.adjuster{display:none;margin-top:12px;border:1px solid var(--border);padding:14px;background:#fafafa;}
+.adjuster.visible{display:block;}
+.adj-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-bottom:10px;display:block;}
+.adj-circle{width:150px;height:150px;border-radius:50%;overflow:hidden;margin:0 auto 12px;border:3px solid white;position:relative;cursor:grab;background:#1a1a1a;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+.adj-circle:active{cursor:grabbing;}
+.adj-img{position:absolute;transform-origin:0 0;user-select:none;pointer-events:none;}
+.adj-ctrl{display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:10px;}
+.adj-btn{width:34px;height:34px;border:1.5px solid var(--border);background:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+.adj-btn:hover{border-color:var(--black);}
+.adj-range{flex:1;accent-color:var(--black);}
+.btn-save{width:100%;padding:11px;background:var(--black);color:white;border:none;font-family:inherit;font-size:10px;font-weight:500;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:opacity .2s;}
+.btn-save:hover{opacity:.8;}
+.save-note{font-size:10px;color:#2e7d32;text-align:center;margin-top:6px;display:none;font-weight:500;}
+.input-row{display:flex;align-items:flex-end;gap:8px;border-bottom:1.5px solid var(--border);transition:border-color .2s;}
+.input-row:focus-within{border-color:var(--black);}
+.input-row input{border-bottom:none!important;flex:1;padding-bottom:10px;}
+.case-btn{flex-shrink:0;padding:0 0 10px;background:none;border:none;font-family:inherit;font-size:10px;font-weight:700;color:var(--gray);cursor:pointer;transition:color .2s;text-transform:none;}
+.case-btn.on{color:var(--black);}
+.btn-gen{width:100%;padding:15px;background:var(--black);color:white;border:none;font-family:inherit;font-size:11px;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;cursor:pointer;transition:opacity .2s;margin-bottom:10px;}
+.btn-gen:hover{opacity:.8;}
+.exp-row{display:none;gap:10px;}
+.exp-row.show{display:grid;grid-template-columns:1fr 1fr;}
+.btn-exp{padding:13px 6px;font-family:inherit;font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1.5px solid var(--black);background:transparent;color:var(--black);}
+.btn-exp:hover{background:var(--black);color:white;}
+.btn-exp.pr{background:var(--black);color:white;}
+.btn-exp.pr:hover{opacity:.8;}
+.preview-panel{display:flex;flex-direction:column;gap:28px;}
+.preview-panel h2{font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--gray);padding-bottom:16px;border-bottom:1px solid var(--border);}
+.cards-row{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;}
+.card-grp{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.card-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gray);}
+.specs-bar{background:white;border:1px solid var(--border);padding:16px 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.spec{text-align:center;}
+.spec-v{font-size:13px;font-weight:400;}
+.spec-k{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gray);margin-top:2px;}
+.badge{width:190px;height:303px;border-radius:10px;overflow:hidden;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.28);flex-shrink:0;}
+.badge-slot{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:44px;height:12px;background:rgba(0,0,0,.5);border-radius:6px;z-index:10;}
+.b-front{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:30px 12px 16px;height:100%;background:var(--badge);}
+.b-brand{font-size:10.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:white;text-align:center;line-height:1.35;flex-shrink:0;}
+.b-ring{width:118px;height:118px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.1);flex-shrink:0;}
+.b-ring img{width:100%;height:100%;object-fit:cover;display:none;}
+.b-ph{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.b-ph svg{width:56px;height:56px;fill:rgba(255,255,255,.4);}
+.b-ph span{font-size:7px;color:rgba(255,255,255,.3);letter-spacing:1px;}
+.b-info{text-align:center;flex-shrink:0;}
+.b-name{font-size:9.5px;font-weight:700;color:white;margin-bottom:3px;word-break:break-word;text-align:center;line-height:1.4;max-width:158px;}
+.b-role{font-size:8px;color:rgba(255,255,255,.6);word-break:break-word;text-align:center;line-height:1.4;max-width:158px;}
+.b-back{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:var(--badge);padding:16px;}
+.b-logo{width:74px;height:74px;border:3.5px solid white;display:flex;align-items:center;justify-content:center;margin-bottom:22px;}
+.b-logo-txt{font-size:38px;font-weight:700;color:white;letter-spacing:-2px;line-height:1;}
+.b-binfo{text-align:center;}
+.b-lbl{font-size:7px;color:rgba(255,255,255,.5);margin-bottom:4px;letter-spacing:.5px;}
+.b-val{font-size:10px;font-weight:700;color:white;margin-bottom:10px;}
+.b-site{font-size:7px;font-weight:600;color:white;letter-spacing:.3px;}
+canvas{display:none;}
 </style>
 </head>
 <body>
-
 <header>
   <div class="logo-box"><span>IB</span></div>
-  <h1>Crachá IB</h1>
+  <h1>Cracha IB</h1>
 </header>
-
 <div class="container">
-
-  <!-- FORM -->
   <div class="form-panel">
-    <h2>Configurar Crachá</h2>
-
+    <h2>Configurar Cracha</h2>
     <div class="field">
-      <label>Tipo de Vínculo</label>
-      <div class="type-selector">
-        <label class="type-option">
-          <input type="radio" name="type" value="CLT" checked onchange="updatePreview()">
-          <div class="type-swatch">CLT — Preto</div>
-        </label>
-        <label class="type-option">
-          <input type="radio" name="type" value="PJ" onchange="updatePreview()">
-          <div class="type-swatch">PJ — Cinza</div>
-        </label>
+      <label>Tipo de Vinculo</label>
+      <div class="type-sel">
+        <label class="type-opt"><input type="radio" name="type" value="CLT" checked onchange="upd()"><div class="type-sw">CLT</div></label>
+        <label class="type-opt"><input type="radio" name="type" value="PJ" onchange="upd()"><div class="type-sw">PJ</div></label>
       </div>
     </div>
-
     <div class="field">
-      <label>Foto do Colaborador (35×35mm)</label>
+      <label>Foto do Colaborador</label>
       <div class="photo-upload">
         <input type="file" id="photoInput" accept="image/*" onchange="handlePhoto(event)">
-        <img class="photo-preview" id="photoPreview" alt="">
-        <span class="upload-icon" id="uploadIcon">↑</span>
-        <div class="upload-text" id="uploadText">Clique para enviar a foto</div>
+        <img class="up-thumb" id="upThumb" alt="">
+        <span class="up-icon" id="upIcon">&#x2191;</span>
+        <div class="up-text" id="upText">Clique para enviar a foto</div>
       </div>
-      <div class="photo-quality" id="photoQuality"></div>
+      <div class="pq" id="pq"></div>
+      <div class="adjuster" id="adjuster">
+        <span class="adj-title">Ajustar posicao e zoom</span>
+        <div class="adj-circle" id="adjCircle">
+          <img class="adj-img" id="adjImg" src="" alt="" draggable="false">
+        </div>
+        <div class="adj-ctrl">
+          <button class="adj-btn" onclick="zm(-0.05)">&#8722;</button>
+          <input type="range" class="adj-range" id="zSlider" min="0.5" max="3" step="0.01" value="1" oninput="zTo(+this.value)">
+          <button class="adj-btn" onclick="zm(+0.05)">+</button>
+        </div>
+        <button class="btn-save" onclick="savePhoto()">&#10003; Salvar posicao</button>
+        <div class="save-note" id="saveNote">Posicao salva com sucesso!</div>
+      </div>
     </div>
-
     <div class="field">
       <label>Nome Completo</label>
-      <div class="input-with-toggle">
-        <input type="text" id="nameInput" placeholder="Ex: João da Silva" oninput="updatePreview()">
-        <button class="case-toggle" id="nameCase" onclick="toggleCase('name')">Aa</button>
+      <div class="input-row">
+        <input type="text" id="nameIn" placeholder="Ex: Julia Unger" oninput="upd()">
+        <button class="case-btn" id="nameBtn" onclick="tc('name')">Aa</button>
       </div>
     </div>
-
     <div class="field">
-      <label>Função</label>
-      <div class="input-with-toggle">
-        <input type="text" id="roleInput" placeholder="Ex: Designer Gráfico" oninput="updatePreview()">
-        <button class="case-toggle" id="roleCase" onclick="toggleCase('role')">Aa</button>
+      <label>Funcao</label>
+      <div class="input-row">
+        <input type="text" id="roleIn" placeholder="Ex: Analista de Sistemas" oninput="upd()">
+        <button class="case-btn" id="roleBtn" onclick="tc('role')">Aa</button>
       </div>
     </div>
-
-    <div class="field" id="admissionField">
-      <label>Data de Admissão</label>
-      <input type="date" id="admissionInput" onchange="updatePreview()">
+    <div class="field" id="admField">
+      <label>Data de Admissao</label>
+      <input type="date" id="admIn" onchange="upd()">
     </div>
-
     <div class="field" id="cnpjField" style="display:none">
       <label>CNPJ</label>
-      <input type="text" id="cnpjInput" placeholder="00.000.000/0000-00" oninput="updatePreview(); formatCNPJ(this)">
+      <input type="text" id="cnpjIn" placeholder="00.000.000/0000-00" oninput="upd();fmtC(this)">
     </div>
-
-    <button class="btn-generate" onclick="generateBadge()">Gerar Crachá</button>
-    <div class="export-btns" id="exportBtns">
-      <button class="btn-export primary" onclick="downloadPDF()">↓ PDF Gráfica</button>
-      <button class="btn-export" onclick="downloadPNG()">↓ PNG 300dpi</button>
+    <button class="btn-gen" onclick="gen()">Gerar Cracha</button>
+    <div class="exp-row" id="expRow">
+      <button class="btn-exp pr" onclick="dlPDF()">&#x2193; PDF Grafica</button>
+      <button class="btn-exp" onclick="dlPNG()">&#x2193; PNG 600dpi</button>
     </div>
-    <canvas id="exportCanvas"></canvas>
+    <canvas id="cv"></canvas>
   </div>
-
-  <!-- PREVIEW -->
   <div class="preview-panel">
-    <h2>Pré-visualização</h2>
-
-    <div class="specs-info">
-      <div class="spec"><div class="spec-value">54×86mm</div><div class="spec-key">Dimensões</div></div>
-      <div class="spec"><div class="spec-value">300 dpi</div><div class="spec-key">Resolução</div></div>
-      <div class="spec"><div class="spec-value">3mm</div><div class="spec-key">Sangria</div></div>
-      <div class="spec"><div class="spec-value">PVCL 0.76</div><div class="spec-key">Material</div></div>
+    <h2>Pre-visualizacao</h2>
+    <div class="specs-bar">
+      <div class="spec"><div class="spec-v">54x86mm</div><div class="spec-k">Dimensoes</div></div>
+      <div class="spec"><div class="spec-v">600dpi</div><div class="spec-k">Resolucao</div></div>
+      <div class="spec"><div class="spec-v">3mm</div><div class="spec-k">Sangria</div></div>
+      <div class="spec"><div class="spec-v">PVCL 0.76</div><div class="spec-k">Material</div></div>
     </div>
-
     <div class="cards-row">
-      <!-- FRENTE -->
-      <div class="card-group">
+      <div class="card-grp">
         <div class="badge">
           <div class="badge-slot"></div>
-          <div class="badge-front" id="badgeFront">
-            <div class="badge-brand">INDEPENDENT<br>BRAZIL</div>
-            <div class="badge-photo-ring">
-              <img id="badgePhoto" src="" alt="">
-              <div class="badge-photo-placeholder" id="photoPlaceholder">
+          <div class="b-front">
+            <div class="b-brand">INDEPENDENT<br>BRAZIL</div>
+            <div class="b-ring" id="bRing">
+              <img id="bPhoto" src="" alt="">
+              <div class="b-ph" id="bPh">
                 <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                <span class="badge-photo-size">FOTO 35×35</span>
+                <span>FOTO 35x35</span>
               </div>
             </div>
-            <div class="badge-info">
-              <div class="badge-name" id="previewName">&lt;Nome Completo&gt;</div>
-              <div class="badge-role" id="previewRole">&lt;Função&gt;</div>
+            <div class="b-info">
+              <div class="b-name" id="pName">&lt;Nome Completo&gt;</div>
+              <div class="b-role" id="pRole">&lt;Funcao&gt;</div>
             </div>
           </div>
         </div>
-        <div class="card-label-small">Frente · Brilho</div>
+        <div class="card-lbl">Frente - Fosco</div>
       </div>
-
-      <!-- VERSO -->
-      <div class="card-group">
+      <div class="card-grp">
         <div class="badge">
           <div class="badge-slot"></div>
-          <div class="badge-back" id="badgeBack">
-            <div class="badge-logo-box">
-              <span class="badge-logo-text">IB</span>
-            </div>
-            <div class="badge-back-bottom">
-              <div class="badge-admission-label" id="backLabel">Admissão:</div>
-              <div class="badge-admission-date" id="previewDate">&lt;00/00/00&gt;</div>
-              <div class="badge-website">www.independentbrazil.com</div>
+          <div class="b-back">
+            <div class="b-logo"><span class="b-logo-txt">IB</span></div>
+            <div class="b-binfo">
+              <div class="b-lbl" id="bLbl">Admissao:</div>
+              <div class="b-val" id="bVal">00/00/0000</div>
+              <div class="b-site">www.independentbrazil.com</div>
             </div>
           </div>
         </div>
-        <div class="card-label-small">Verso · Fosco</div>
+        <div class="card-lbl">Verso - Fosco</div>
       </div>
     </div>
-
-
   </div>
 </div>
-
 <script>
-// ── Estado ────────────────────────────────────────────────────
-let photoDataURL = null;
-const caseState = { name: false, role: false };
-
-function toggleCase(field) {
-  caseState[field] = !caseState[field];
-  var btn = document.getElementById(field + 'Case');
-  btn.textContent = caseState[field] ? 'AA' : 'Aa';
-  if (caseState[field]) { btn.classList.add('active'); } else { btn.classList.remove('active'); }
-  updatePreview();
-}
-
-function applyCase(text, field) {
-  return caseState[field] ? text.toUpperCase() : text;
-}
-
-function formatCNPJ(input) {
-  var v = input.value.replace(/\D/g,'');
-  v = v.replace(/^(\d{2})(\d)/,'$1.$2');
-  v = v.replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3');
-  v = v.replace(/\.(\d{3})(\d)/,'.$1/$2');
-  v = v.replace(/(\d{4})(\d)/,'$1-$2');
-  input.value = v.substring(0,18);
-}
-
-// ── Foto ──────────────────────────────────────────────────────
-function handlePhoto(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    photoDataURL = ev.target.result;
-    var img = new Image();
-    img.onload = function() {
-      checkPhotoQuality(img.naturalWidth, img.naturalHeight);
-      document.getElementById('photoPreview').src = photoDataURL;
-      document.getElementById('photoPreview').style.display = 'block';
-      document.getElementById('uploadIcon').style.display = 'none';
-      document.getElementById('uploadText').textContent = img.naturalWidth + 'x' + img.naturalHeight + 'px';
-      var ph = document.getElementById('badgePhoto');
-      ph.src = photoDataURL;
-      ph.style.display = 'block';
-      document.getElementById('photoPlaceholder').style.display = 'none';
-    };
-    img.src = photoDataURL;
-  };
-  reader.readAsDataURL(file);
-}
-
-function checkPhotoQuality(w, h) {
-  var el = document.getElementById('photoQuality');
-  el.style.display = 'block';
-  var small = Math.min(w, h);
-  if (small >= 413) {
-    el.className = 'photo-quality ok';
-    el.textContent = '✓ Boa resolução para impressão (' + w + 'x' + h + 'px)';
-  } else if (small >= 200) {
-    el.className = 'photo-quality warn';
-    el.textContent = '⚠ Qualidade reduzida (' + w + 'x' + h + 'px). Recomendado mínimo 413x413px.';
-  } else {
-    el.className = 'photo-quality bad';
-    el.textContent = '✕ Foto muito pequena (' + w + 'x' + h + 'px). Envie uma imagem maior.';
-  }
-}
-
-// ── Preview ───────────────────────────────────────────────────
-function updatePreview() {
-  var isPJ = document.querySelector('input[name="type"]:checked').value === 'PJ';
-  var name = applyCase(document.getElementById('nameInput').value || '<Nome Completo>', 'name');
-  var role = applyCase(document.getElementById('roleInput').value || '<Função>', 'role');
-  var admDate = document.getElementById('admissionInput').value;
-  var cnpj = document.getElementById('cnpjInput').value;
-
-  document.getElementById('badgeFront').className = 'badge-front' + (isPJ ? ' pj' : '');
-  document.getElementById('badgeBack').className  = 'badge-back'  + (isPJ ? ' pj' : '');
-  document.getElementById('previewName').textContent = name;
-  document.getElementById('previewRole').textContent = role;
-
-  document.getElementById('cnpjField').style.display      = isPJ ? 'block' : 'none';
-  document.getElementById('admissionField').style.display = isPJ ? 'none'  : 'block';
-
-  if (isPJ) {
-    document.getElementById('backLabel').textContent  = 'CNPJ:';
-    document.getElementById('previewDate').textContent = cnpj || '<Número>';
-  } else {
-    document.getElementById('backLabel').textContent  = 'Admissão:';
-    if (admDate) {
-      var p = admDate.split('-');
-      document.getElementById('previewDate').textContent = p[2] + '/' + p[1] + '/' + p[0];
-    } else {
-      document.getElementById('previewDate').textContent = '00/00/00';
-    }
-  }
-}
-
-function generateBadge() {
-  updatePreview();
-  document.getElementById('exportBtns').className = 'export-btns visible';
-}
-
-// ── Canvas constants (600dpi + 3mm bleed) ────────────────────
-var DPI   = 600;
-var MM    = DPI / 25.4;
-var BW    = Math.round(54 * MM);
-var BH    = Math.round(86 * MM);
-var BLEED = Math.round(3  * MM);
-var CW    = BW + BLEED * 2;
-var CH    = BH + BLEED * 2;
-
-function rr(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-  ctx.closePath();
-}
-
-function drawBase(ctx, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, CW, CH);
-  // Crop marks
-  ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
-  var g = 4, mk = 12;
-  [[BLEED-g-mk,BLEED,BLEED-g,BLEED],[0,BLEED-g-mk,0,BLEED-g],
-   [CW-BLEED+g,BLEED,CW-BLEED+g+mk,BLEED],[CW-BLEED+g,0,CW-BLEED+g,BLEED-g],
-   [BLEED-g-mk,CH-BLEED,BLEED-g,CH-BLEED],[0,CH-BLEED+g,0,CH-BLEED+g+mk],
-   [CW-BLEED+g,CH-BLEED,CW-BLEED+g+mk,CH-BLEED],[CW-BLEED+g,CH-BLEED+g,CW-BLEED+g,CH-BLEED+g+mk]
-  ].forEach(function(pts) {
-    ctx.beginPath(); ctx.moveTo(pts[0],pts[1]); ctx.lineTo(pts[2],pts[3]); ctx.stroke();
-  });
-}
-
-function wrapText(ctx, text, maxWidth) {
-  var words = text.split(' ');
-  var lines = [];
-  var current = '';
-  for (var i = 0; i < words.length; i++) {
-    var test = current ? current + ' ' + words[i] : words[i];
-    if (ctx.measureText(test).width > maxWidth && current) {
-      lines.push(current);
-      current = words[i];
-    } else {
-      current = test;
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
-}
-
-function drawFront(ctx, color, name, role) {
-  drawBase(ctx, color);
-  var ox = BLEED, oy = BLEED;
-
-  // Slot
-  var sw = Math.round(13*MM), sh = Math.round(4*MM);
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  rr(ctx, ox+BW/2-sw/2, oy+Math.round(3.5*MM), sw, sh, sh/2); ctx.fill();
-
-  // Brand
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.font = 'bold ' + Math.round(5*MM) + 'px Helvetica,Arial';
-  ctx.fillText('INDEPENDENT', ox+BW/2, oy+Math.round(15*MM));
-  ctx.fillText('BRAZIL',      ox+BW/2, oy+Math.round(21.5*MM));
-
-  // Photo circle
-  var cx = ox+BW/2, cy = oy+Math.round(48*MM), cr = Math.round(19*MM);
-  ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fill(); // background fill only, border drawn after photo
-
-  return { cx:cx, cy:cy, cr:cr, ox:ox, oy:oy };
-}
-
-function finishFront(ctx, info, name, role) {
-  var ox = info.ox, oy = info.oy;
-  var maxW = BW - Math.round(16*MM);
-  var lineH = Math.round(4.5*MM);
-
-  // Name with word wrap
-  ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-  ctx.font = 'bold ' + Math.round(3.8*MM) + 'px Helvetica,Arial';
-  var nameLines = wrapText(ctx, name, maxW);
-  for (var i = 0; i < nameLines.length; i++) {
-    ctx.fillText(nameLines[i], ox+BW/2, oy+Math.round(74*MM) + i*lineH);
-  }
-
-  // Role with word wrap — starts right after name
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = Math.round(3.0*MM) + 'px Helvetica,Arial';
-  var roleLineH = Math.round(4*MM);
-  var roleStartY = oy+Math.round(74*MM) + nameLines.length * lineH;
-  var roleLines = wrapText(ctx, role, maxW);
-  for (var j = 0; j < roleLines.length; j++) {
-    ctx.fillText(roleLines[j], ox+BW/2, roleStartY + j*roleLineH);
-  }
-}
-
-function drawBack(ctx, color, bottomLabel, bottomValue) {
-  drawBase(ctx, color);
-  var ox = BLEED, oy = BLEED;
-
-  // Slot
-  var sw = Math.round(13*MM), sh = Math.round(4*MM);
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  rr(ctx, ox+BW/2-sw/2, oy+Math.round(3.5*MM), sw, sh, sh/2); ctx.fill();
-
-  // IB Logo — centered
-  var ls = Math.round(28*MM);
-  var lx = ox+BW/2 - ls/2;
-  var ly = oy+BH/2 - ls/2 - Math.round(2*MM);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.round(2.6*MM);
-  ctx.strokeRect(lx, ly, ls, ls);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold ' + Math.round(20*MM) + 'px Helvetica,Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('IB', ox+BW/2, ly+ls-Math.round(5.5*MM));
-
-  // Bottom info
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.font = Math.round(2.5*MM) + 'px Helvetica,Arial';
-  ctx.fillText(bottomLabel, ox+BW/2, oy+BH-Math.round(14*MM));
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold ' + Math.round(3.2*MM) + 'px Helvetica,Arial';
-  ctx.fillText(bottomValue, ox+BW/2, oy+BH-Math.round(9.8*MM));
-  ctx.font = 'bold ' + Math.round(2.8*MM) + 'px Helvetica,Arial';
-  ctx.fillText('www.independentbrazil.com', ox+BW/2, oy+BH-Math.round(5.5*MM));
-}
-
-// ── Render to canvas ──────────────────────────────────────────
-function getVals() {
-  var isPJ = document.querySelector('input[name="type"]:checked').value === 'PJ';
-  var name = applyCase(document.getElementById('nameInput').value || 'Nome Completo', 'name');
-  var role = applyCase(document.getElementById('roleInput').value || 'Função', 'role');
-  var admDate = document.getElementById('admissionInput').value;
-  var cnpj = document.getElementById('cnpjInput').value;
-  var color = isPJ ? '#5a5a5a' : '#111111';
-  var type  = isPJ ? 'PJ' : 'CLT';
-  var bottomLabel = isPJ ? 'CNPJ:' : 'Admissão:';
-  var bottomValue;
-  if (isPJ) {
-    bottomValue = cnpj || '<Número>';
-  } else if (admDate) {
-    var p = admDate.split('-');
-    bottomValue = p[2] + '/' + p[1] + '/' + p[0];
-  } else {
-    bottomValue = '<00/00/00>';
-  }
-  return { isPJ:isPJ, name:name, role:role, color:color, type:type, bottomLabel:bottomLabel, bottomValue:bottomValue };
-}
-
-function renderFront(canvas, vals) {
-  return new Promise(function(resolve) {
-    canvas.width = CW; canvas.height = CH;
-    var ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    var info = drawFront(ctx, vals.color, vals.name, vals.role);
-    if (photoDataURL) {
-      var img = new Image();
-      img.onload = function() {
-        // 1. Draw photo clipped to circle
-        ctx.save();
-        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-        ctx.beginPath(); ctx.arc(info.cx, info.cy, info.cr, 0, Math.PI*2); ctx.clip();
-        var d = info.cr * 2;
-        var scale = Math.max(d / img.naturalWidth, d / img.naturalHeight);
-        var sw2 = img.naturalWidth * scale, sh2 = img.naturalHeight * scale;
-        ctx.drawImage(img, info.cx - sw2/2, info.cy - sh2/2, sw2, sh2);
-        ctx.restore();
-
-        // 2. Draw crisp white border OUTSIDE the clip (on top, no jagged edges)
-        var bw = Math.round(1.5*MM);
-        ctx.beginPath(); ctx.arc(info.cx, info.cy, info.cr + bw/2, 0, Math.PI*2);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = bw;
-        ctx.stroke();
-
-        finishFront(ctx, info, vals.name, vals.role);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.src = photoDataURL;
-    } else {
-      ctx.fillStyle = 'rgba(255,255,255,0.1)';
-      ctx.beginPath(); ctx.arc(info.cx, info.cy, info.cr, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.font = Math.round(2.5*MM) + 'px Helvetica,Arial'; ctx.textAlign = 'center';
-      ctx.fillText('FOTO 35x35', info.cx, info.cy + Math.round(1*MM));
-      finishFront(ctx, info, vals.name, vals.role);
-      resolve(canvas.toDataURL('image/png'));
-    }
-  });
-}
-
-function renderBack(canvas, vals) {
-  return new Promise(function(resolve) {
-    canvas.width = CW; canvas.height = CH;
-    var ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    drawBack(ctx, vals.color, vals.bottomLabel, vals.bottomValue);
-    resolve(canvas.toDataURL('image/png'));
-  });
-}
-
-// ── Downloads ─────────────────────────────────────────────────
-function triggerDownload(dataURL, filename) {
-  var link = document.createElement('a');
-  link.download = filename;
-  link.href = dataURL;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-async function downloadPNG() {
-  var vals = getVals();
-  var canvas = document.getElementById('exportCanvas');
-  var frontURL = await renderFront(canvas, vals);
-  triggerDownload(frontURL, 'cracha-' + vals.type + '-FRENTE-300dpi.png');
-  await new Promise(function(r){ setTimeout(r, 800); });
-  var backURL = await renderBack(canvas, vals);
-  triggerDownload(backURL, 'cracha-' + vals.type + '-VERSO-300dpi.png');
-}
-
-async function downloadPDF() {
-  var vals = getVals();
-  var canvas = document.getElementById('exportCanvas');
-
-  var pageW = 54, pageH = 86;
-
-  var frontURL = await renderFront(canvas, vals);
-  var backURL  = await renderBack(canvas, vals);
-
-  var jsPDF = window.jspdf.jsPDF;
-  var pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:[pageW, pageH] });
-
-  // Pág 1 — Frente
-  var frontClean = await roundedCrop(frontURL, pageW, pageH, 2);
-  pdf.addImage(frontClean, 'PNG', 0, 0, pageW, pageH, undefined, 'NONE');
-
-  // Pág 2 — Verso
-  pdf.addPage([pageW, pageH]);
-  var backClean = await roundedCrop(backURL, pageW, pageH, 2);
-  pdf.addImage(backClean, 'PNG', 0, 0, pageW, pageH, undefined, 'NONE');
-
-  pdf.setProperties({
-    title: 'Crachá IB – ' + vals.type,
-    subject: 'Independent Brazil – Arquivo para gráfica',
-    author: 'Independent Brazil',
-    creator: 'Crachá IB App'
-  });
-
-  pdf.save('cracha-IB-' + vals.type + '-GRAFICA.pdf');
-}
-
-function roundedCrop(imgURL, wMM, hMM, rMM) {
-  return new Promise(function(resolve) {
-    var sc = 600 / 25.4; // px per mm @ 600dpi — máxima qualidade
-    var bleed = Math.round(3 * sc);
-    var W = Math.round(wMM * sc);
-    var H = Math.round(hMM * sc);
-    var R = rMM * sc;
-
-    var img = new Image();
-    img.onload = function() {
-      var tmp = document.createElement('canvas');
-      tmp.width = W; tmp.height = H;
-      var ctx = tmp.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      // Rounded clip
-      ctx.beginPath();
-      ctx.moveTo(R, 0);
-      ctx.lineTo(W-R, 0); ctx.quadraticCurveTo(W, 0, W, R);
-      ctx.lineTo(W, H-R); ctx.quadraticCurveTo(W, H, W-R, H);
-      ctx.lineTo(R, H);   ctx.quadraticCurveTo(0, H, 0, H-R);
-      ctx.lineTo(0, R);   ctx.quadraticCurveTo(0, 0, R, 0);
-      ctx.closePath();
-      ctx.clip();
-
-      // Draw cropping the bleed
-      ctx.drawImage(img, bleed, bleed, img.naturalWidth - bleed*2, img.naturalHeight - bleed*2, 0, 0, W, H);
-
-      // PNG — sem perda de qualidade
-      resolve(tmp.toDataURL('image/png'));
-    };
-    img.src = imgURL;
-  });
-}
-
-function addRoundedImageToPDF() {} // legacy stub, não usada
-
-function addFooter(pdf, pageW, pageH, vals, face, material) {
-  var y0 = pageH + 3;
-  var cx = pageW / 2;
-  pdf.setDrawColor(180); pdf.setLineWidth(0.2); pdf.line(3, y0, pageW-3, y0);
-  pdf.setFont('helvetica','bold'); pdf.setFontSize(5); pdf.setTextColor(30);
-  pdf.text(vals.type + ' | ' + face, cx, y0+4, { align:'center' });
-  pdf.setFont('helvetica','normal'); pdf.setFontSize(4); pdf.setTextColor(80);
-  var specs = [
-    ['Material', material], ['Dimensões', '54 × 86 mm'],
-    ['Sangria', '3 mm (todos os lados)'], ['Resolução', '300 dpi'],
-    ['Tamanho final', '708 × 1086 px'], ['Cor', vals.isPJ ? 'Cinza' : 'Preto']
-  ];
-  specs.forEach(function(s, i) {
-    var col = i % 2, row = Math.floor(i / 2);
-    var x = col === 0 ? 4 : cx + 2;
-    var y = y0 + 9 + row * 5.5;
-    pdf.setFont('helvetica','bold'); pdf.setTextColor(30); pdf.text(s[0] + ':', x, y);
-    pdf.setFont('helvetica','normal'); pdf.setTextColor(80); pdf.text(s[1], x+14, y);
-  });
-  pdf.setFontSize(3.5); pdf.setTextColor(150);
-  pdf.text('Gerado por Crachá IB App · Independent Brazil', cx, y0+27, { align:'center' });
-}
-
-updatePreview();
+var rawP=null,finP=null,cS={name:false,role:false};
+var A={s:1,x:0,y:0,d:false,sx:0,sy:0,ox:0,oy:0};
+function tc(f){cS[f]=!cS[f];var b=document.getElementById(f+'Btn');b.textContent=cS[f]?'AA':'Aa';cS[f]?b.classList.add('on'):b.classList.remove('on');upd();}
+function ac(t,f){return cS[f]?t.toUpperCase():t;}
+function fmtC(el){var v=el.value.replace(/\D/g,'');v=v.replace(/^(\d{2})(\d)/,'$1.$2');v=v.replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3');v=v.replace(/\.(\d{3})(\d)/,'.$1/$2');v=v.replace(/(\d{4})(\d)/,'$1-$2');el.value=v.substring(0,18);}
+function handlePhoto(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){rawP=ev.target.result;finP=null;var img=new Image();img.onload=function(){chkQ(img.naturalWidth,img.naturalHeight);var th=document.getElementById('upThumb');th.src=rawP;th.style.display='block';document.getElementById('upIcon').style.display='none';document.getElementById('upText').textContent=img.naturalWidth+'x'+img.naturalHeight+'px';document.getElementById('adjuster').classList.add('visible');document.getElementById('saveNote').style.display='none';A.s=1;A.x=0;A.y=0;document.getElementById('zSlider').value=1;rdj();};img.src=rawP;};r.readAsDataURL(f);}
+function chkQ(w,h){var el=document.getElementById('pq');el.style.display='block';var s=Math.min(w,h);if(s>=413){el.className='pq ok';el.textContent='Boa resolucao ('+w+'x'+h+'px)';}else if(s>=200){el.className='pq warn';el.textContent='Qualidade reduzida - minimo 413x413px';}else{el.className='pq bad';el.textContent='Foto muito pequena ('+w+'x'+h+'px)';}}
+function rdj(){var im=document.getElementById('adjImg');im.src=rawP;var sz=150;function draw(){var iw=im.naturalWidth,ih=im.naturalHeight;var base=Math.max(sz/iw,sz/ih)*A.s;var w=iw*base,h=ih*base;im.style.width=w+'px';im.style.height=h+'px';im.style.left=(sz/2-w/2+A.x)+'px';im.style.top=(sz/2-h/2+A.y)+'px';}if(im.complete&&im.naturalWidth){draw();}else{im.onload=draw;}}
+function zm(d){A.s=Math.min(3,Math.max(0.5,A.s+d));document.getElementById('zSlider').value=A.s;rdj();}
+function zTo(v){A.s=v;rdj();}
+document.addEventListener('DOMContentLoaded',function(){var c=document.getElementById('adjCircle');c.addEventListener('mousedown',function(e){A.d=true;A.sx=e.clientX;A.sy=e.clientY;A.ox=A.x;A.oy=A.y;e.preventDefault();});document.addEventListener('mousemove',function(e){if(!A.d)return;A.x=A.ox+(e.clientX-A.sx);A.y=A.oy+(e.clientY-A.sy);rdj();});document.addEventListener('mouseup',function(){A.d=false;});c.addEventListener('touchstart',function(e){var t=e.touches[0];A.d=true;A.sx=t.clientX;A.sy=t.clientY;A.ox=A.x;A.oy=A.y;e.preventDefault();},{passive:false});document.addEventListener('touchmove',function(e){if(!A.d)return;var t=e.touches[0];A.x=A.ox+(t.clientX-A.sx);A.y=A.oy+(t.clientY-A.sy);rdj();e.preventDefault();},{passive:false});document.addEventListener('touchend',function(){A.d=false;});});
+function savePhoto(){var sz=600,adj=150;var tmp=document.createElement('canvas');tmp.width=sz;tmp.height=sz;var ctx=tmp.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';var img=new Image();img.onload=function(){var base=Math.max(adj/img.naturalWidth,adj/img.naturalHeight)*A.s;var w=img.naturalWidth*base,h=img.naturalHeight*base;var lx=adj/2-w/2+A.x,ly=adj/2-h/2+A.y;var sc=sz/adj;ctx.drawImage(img,lx*sc,ly*sc,w*sc,h*sc);finP=tmp.toDataURL('image/png');var bp=document.getElementById('bPhoto');bp.src=finP;bp.style.display='block';document.getElementById('bPh').style.display='none';var n=document.getElementById('saveNote');n.style.display='block';setTimeout(function(){n.style.display='none';},2000);};img.src=rawP;}
+function upd(){var isPJ=document.querySelector('input[name="type"]:checked').value==='PJ';var nm=ac(document.getElementById('nameIn').value||'<Nome Completo>','name');var rl=ac(document.getElementById('roleIn').value||'<Funcao>','role');var dt=document.getElementById('admIn').value;var cnpj=document.getElementById('cnpjIn').value;document.getElementById('pName').textContent=nm;document.getElementById('pRole').textContent=rl;document.getElementById('cnpjField').style.display=isPJ?'block':'none';document.getElementById('admField').style.display=isPJ?'none':'block';if(isPJ){document.getElementById('bLbl').textContent='CNPJ:';document.getElementById('bVal').textContent=cnpj||'00.000.000/0000-00';}else{document.getElementById('bLbl').textContent='Admissao:';if(dt){var p=dt.split('-');document.getElementById('bVal').textContent=p[2]+'/'+p[1]+'/'+p[0];}else document.getElementById('bVal').textContent='00/00/0000';}}
+function gen(){upd();document.getElementById('expRow').className='exp-row show';}
+var DPI=600,MM=DPI/25.4,BW=Math.round(54*MM),BH=Math.round(86*MM),BL=Math.round(3*MM),CW=BW+BL*2,CH=BH+BL*2;
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+function drawBase(ctx){ctx.fillStyle='#111111';ctx.fillRect(0,0,CW,CH);ctx.strokeStyle='#000';ctx.lineWidth=1;var g=4,mk=14;[[BL-g-mk,BL,BL-g,BL],[0,BL-g-mk,0,BL-g],[CW-BL+g,BL,CW-BL+g+mk,BL],[CW-BL+g,0,CW-BL+g,BL-g],[BL-g-mk,CH-BL,BL-g,CH-BL],[0,CH-BL+g,0,CH-BL+g+mk],[CW-BL+g,CH-BL,CW-BL+g+mk,CH-BL],[CW-BL+g,CH-BL+g,CW-BL+g,CH-BL+g+mk]].forEach(function(p){ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(p[2],p[3]);ctx.stroke();});}
+function wrap(ctx,t,mw){var ws=t.split(' '),ls=[],cur='';for(var i=0;i<ws.length;i++){var tt=cur?cur+' '+ws[i]:ws[i];if(ctx.measureText(tt).width>mw&&cur){ls.push(cur);cur=ws[i];}else cur=tt;}if(cur)ls.push(cur);return ls;}
+function drawFront(ctx,nm,rl){drawBase(ctx);var ox=BL,oy=BL;var sw=Math.round(13*MM),sh=Math.round(4*MM);ctx.fillStyle='rgba(0,0,0,0.45)';rr(ctx,ox+BW/2-sw/2,oy+Math.round(3.5*MM),sw,sh,sh/2);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold '+Math.round(5*MM)+'px Helvetica,Arial';ctx.fillText('INDEPENDENT',ox+BW/2,oy+Math.round(15*MM));ctx.fillText('BRAZIL',ox+BW/2,oy+Math.round(21.5*MM));var cx=ox+BW/2,cy=oy+Math.round(47*MM),cr=Math.round(18.5*MM);ctx.beginPath();ctx.arc(cx,cy,cr,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fill();return{cx:cx,cy:cy,cr:cr,ox:ox,oy:oy};}
+function finishFront(ctx,info,nm,rl){var ox=info.ox,oy=info.oy,bw=Math.round(1.5*MM);ctx.beginPath();ctx.arc(info.cx,info.cy,info.cr+bw/2,0,Math.PI*2);ctx.strokeStyle='#fff';ctx.lineWidth=bw;ctx.stroke();var mw=BW-Math.round(14*MM),lhN=Math.round(4.5*MM);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold '+Math.round(3.8*MM)+'px Helvetica,Arial';var nls=wrap(ctx,nm,mw);for(var i=0;i<nls.length;i++)ctx.fillText(nls[i],ox+BW/2,oy+Math.round(73*MM)+i*lhN);ctx.fillStyle='rgba(255,255,255,0.6)';ctx.font=Math.round(3.0*MM)+'px Helvetica,Arial';var ry=oy+Math.round(73*MM)+nls.length*lhN;var rls=wrap(ctx,rl,mw);for(var j=0;j<rls.length;j++)ctx.fillText(rls[j],ox+BW/2,ry+j*Math.round(4*MM));}
+function drawBack(ctx,lbl,val){drawBase(ctx);var ox=BL,oy=BL;var sw=Math.round(13*MM),sh=Math.round(4*MM);ctx.fillStyle='rgba(0,0,0,0.45)';rr(ctx,ox+BW/2-sw/2,oy+Math.round(3.5*MM),sw,sh,sh/2);ctx.fill();var ls=Math.round(22*MM),lx=ox+BW/2-ls/2,ly=oy+Math.round(20*MM);ctx.strokeStyle='#fff';ctx.lineWidth=Math.round(1.6*MM);ctx.strokeRect(lx,ly,ls,ls);ctx.fillStyle='#fff';ctx.font='bold '+Math.round(13.5*MM)+'px Helvetica,Arial';ctx.textAlign='center';ctx.fillText('IB',ox+BW/2,ly+ls-Math.round(3*MM));var iy=oy+Math.round(58*MM);ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font=Math.round(2.8*MM)+'px Helvetica,Arial';ctx.fillText(lbl,ox+BW/2,iy);ctx.fillStyle='#fff';ctx.font='bold '+Math.round(4.2*MM)+'px Helvetica,Arial';ctx.fillText(val,ox+BW/2,iy+Math.round(7*MM));ctx.font='bold '+Math.round(3*MM)+'px Helvetica,Arial';ctx.fillText('www.independentbrazil.com',ox+BW/2,iy+Math.round(16*MM));}
+function gv(){var isPJ=document.querySelector('input[name=type]:checked').value==='PJ';var nm=ac(document.getElementById('nameIn').value||'Nome Completo','name');var rl=ac(document.getElementById('roleIn').value||'Funcao','role');var dt=document.getElementById('admIn').value;var cnpj=document.getElementById('cnpjIn').value;var lbl=isPJ?'CNPJ:':'Admissao:';var val;if(isPJ)val=cnpj||'00.000.000/0000-00';else if(dt){var p=dt.split('-');val=p[2]+'/'+p[1]+'/'+p[0];}else val='00/00/0000';return{isPJ:isPJ,name:nm,role:rl,type:isPJ?'PJ':'CLT',label:lbl,value:val};}
+function rFront(c,v){return new Promise(function(res){c.width=CW;c.height=CH;var ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';var info=drawFront(ctx,v.name,v.role);var src=finP||rawP;if(src){var img=new Image();img.onload=function(){ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.beginPath();ctx.arc(info.cx,info.cy,info.cr,0,Math.PI*2);ctx.clip();var d=info.cr*2,sc=Math.max(d/img.naturalWidth,d/img.naturalHeight),iw=img.naturalWidth*sc,ih=img.naturalHeight*sc;ctx.drawImage(img,info.cx-iw/2,info.cy-ih/2,iw,ih);ctx.restore();finishFront(ctx,info,v.name,v.role);res(c.toDataURL('image/png'));};img.src=src;}else{ctx.fillStyle='rgba(255,255,255,0.35)';ctx.textAlign='center';ctx.font=Math.round(2.5*MM)+'px Helvetica,Arial';ctx.fillText('FOTO 35x35',info.cx,info.cy+Math.round(1*MM));finishFront(ctx,info,v.name,v.role);res(c.toDataURL('image/png'));}});}
+function rBack(c,v){return new Promise(function(res){c.width=CW;c.height=CH;var ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';drawBack(ctx,v.label,v.value);res(c.toDataURL('image/png'));});}
+function rCrop(url,wM,hM,rM){return new Promise(function(res){var sc=600/25.4,bl=Math.round(3*sc),W=Math.round(wM*sc),H=Math.round(hM*sc),R=rM*sc;var img=new Image();img.onload=function(){var tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;var ctx=tmp.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.beginPath();ctx.moveTo(R,0);ctx.lineTo(W-R,0);ctx.quadraticCurveTo(W,0,W,R);ctx.lineTo(W,H-R);ctx.quadraticCurveTo(W,H,W-R,H);ctx.lineTo(R,H);ctx.quadraticCurveTo(0,H,0,H-R);ctx.lineTo(0,R);ctx.quadraticCurveTo(0,0,R,0);ctx.closePath();ctx.clip();ctx.drawImage(img,bl,bl,img.naturalWidth-bl*2,img.naturalHeight-bl*2,0,0,W,H);res(tmp.toDataURL('image/png'));};img.src=url;});}
+function tDL(url,n){var a=document.createElement('a');a.download=n;a.href=url;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+async function dlPNG(){var v=gv(),c=document.getElementById('cv');tDL(await rFront(c,v),'cracha-'+v.type+'-FRENTE-600dpi.png');await new Promise(function(r){setTimeout(r,800);});tDL(await rBack(c,v),'cracha-'+v.type+'-VERSO-600dpi.png');}
+async function dlPDF(){var v=gv(),c=document.getElementById('cv'),pw=54,ph=86;var fu=await rFront(c,v),bu=await rBack(c,v);var fc=await rCrop(fu,pw,ph,2),bc=await rCrop(bu,pw,ph,2);var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:[pw,ph]});pdf.addImage(fc,'PNG',0,0,pw,ph,undefined,'NONE');pdf.addPage([pw,ph]);pdf.addImage(bc,'PNG',0,0,pw,ph,undefined,'NONE');pdf.setProperties({title:'Cracha IB - '+v.type,author:'Independent Brazil',creator:'Cracha IB App'});pdf.save('cracha-IB-'+v.type+'-GRAFICA.pdf');}
+upd();
 </script>
 </body>
 </html>
