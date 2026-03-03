@@ -8,7 +8,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{--black:#1a1a1a;--border:#e0e0e0;--gray:#888;--badge:#111111;}
-body{font-family:Helvetica,Arial,sans-serif;background:#f0f0f0;color:var(--black);}
+body{font-family:Helvetica Neue,Helvetica,Arial,sans-serif;background:#f0f0f0;color:var(--black);}
 header{background:var(--black);padding:16px 32px;display:flex;align-items:center;gap:14px;}
 .hlogo{width:36px;height:36px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative;}
 .hlogo::before{content:'';position:absolute;inset:4px;border:2px solid #000;}
@@ -123,6 +123,8 @@ canvas{display:none;}
   </div>
   <div class="sep"></div>
   <button class="tbtn" onclick="selectEl(null)">&#x2715; Deselect</button>
+  <button class="tbtn" id="btnStabilize" onclick="stabilize()">&#x1F512; Estabilizar</button>
+  <button class="tbtn" id="btnEdit" onclick="editMode()" style="display:none">&#x270E; Editar</button>
   <button class="tbtn" onclick="resetLayout()">&#x21BA; Reset</button>
   <div class="sep"></div>
   <button class="tbtn primary" onclick="dlPDF()">&#x2193; PDF Grafica</button>
@@ -446,6 +448,25 @@ function updateCaseBtns(t){
   document.getElementById('caseLower').classList.toggle('on',t==='lowercase');
 }
 
+function stabilize(){
+  // Disable dragging on all elements
+  document.querySelectorAll('.el,.el-photo').forEach(function(el){
+    el.style.pointerEvents='none';
+    el.classList.remove('selected');
+  });
+  document.getElementById('elControls').classList.remove('visible');
+  selectedEl=null;
+  document.getElementById('btnStabilize').style.display='none';
+  document.getElementById('btnEdit').style.display='';
+  document.getElementById('canvasArea').style.cursor='default';
+}
+function editMode(){
+  document.querySelectorAll('.el,.el-photo').forEach(function(el){
+    el.style.pointerEvents='auto';
+  });
+  document.getElementById('btnStabilize').style.display='';
+  document.getElementById('btnEdit').style.display='none';
+}
 function resetLayout(){
   // restore default positions/sizes
   Object.keys(defaultStyles).forEach(function(id){
@@ -637,8 +658,12 @@ function drawTextEl(ctx,elId,multiline){
   ctx.letterSpacing=(d.ls||0)+'px';
   var ax=d.align==='center'?d.px+d.pw/2:d.align==='right'?d.px+d.pw:d.px;
   if(multiline){
-    var lines=d.txt.split(/\n|<br\s*\/?>/i);
-    for(var i=0;i<lines.length;i++) ctx.fillText(lines[i].trim(),ax,d.py+d.fs*(i+1)*0.95);
+    // Read from innerHTML to get <br> splits
+    var spanEl=document.getElementById(elId).querySelector('span');
+    var rawHtml=spanEl?spanEl.innerHTML:d.txt;
+    var lines=rawHtml.split(/<br\s*\/?>/i).map(function(s){return s.trim();});
+    var lh=d.fs*1.15;
+    for(var i=0;i<lines.length;i++) ctx.fillText(lines[i],ax,d.py+d.fs+i*lh);
   } else {
     var wlines=wrap(ctx,d.txt,d.pw);
     for(var j=0;j<wlines.length;j++) ctx.fillText(wlines[j],ax,d.py+d.fs+(j*d.fs*1.3));
@@ -672,10 +697,20 @@ function renderFront(canvas){
 
     var src=finP||rawP;
     function afterPhoto(){
-      // Clean white border — single crisp stroke, NO halo
+      // Clean white border — supersampled for crisp antialiasing
       var bw=Math.round(1.8*MM);
-      ctx.beginPath();ctx.arc(cx,cy,cr+bw/2,0,Math.PI*2);
-      ctx.strokeStyle='#ffffff';ctx.lineWidth=bw;ctx.stroke();
+      // Draw at 4x then downscale for perfect smooth circle edge
+      var ss=4;
+      var bsz=Math.round((cr+bw*2)*2*ss);
+      var btmp=document.createElement('canvas');
+      btmp.width=bsz;btmp.height=bsz;
+      var bctx=btmp.getContext('2d');
+      bctx.imageSmoothingEnabled=true;bctx.imageSmoothingQuality='high';
+      var bcx=bsz/2,bcy=bsz/2,bcr=(cr+bw/2)*ss;
+      bctx.beginPath();bctx.arc(bcx,bcy,bcr,0,Math.PI*2);
+      bctx.strokeStyle='#ffffff';bctx.lineWidth=bw*ss;bctx.stroke();
+      var finalSz=Math.round((cr+bw*2)*2);
+      ctx.drawImage(btmp,cx-(cr+bw*2),cy-(cr+bw*2),finalSz,finalSz);
       // Name and role
       drawTextEl(ctx,'elName',false);
       drawTextEl(ctx,'elRole',false);
