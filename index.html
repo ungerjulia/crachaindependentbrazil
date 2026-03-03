@@ -26,6 +26,10 @@ header h1{color:#fff;font-size:14px;font-weight:300;letter-spacing:3px;text-tran
 .tbtn:hover{border-color:#000;}
 .tbtn.primary{background:#000;color:#fff;border-color:#000;}
 .tbtn.primary:hover{opacity:.8;}
+.lock-btn{background:#f59e0b;color:#000;border-color:#f59e0b;font-weight:700;}
+.lock-btn:hover{background:#d97706;border-color:#d97706;color:#000;}
+.edit-btn{background:#3b82f6;color:#fff;border-color:#3b82f6;font-weight:700;}
+.edit-btn:hover{background:#2563eb;border-color:#2563eb;color:#fff;}
 
 .workspace{display:flex;gap:0;height:calc(100vh - 110px);}
 
@@ -107,6 +111,14 @@ input[type=text]:focus,input[type=date]:focus{border-color:#000;}
 .badge-slot{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:42px;height:11px;background:rgba(0,0,0,.55);border-radius:6px;z-index:20;pointer-events:none;}
 
 canvas{display:none;}
+/* ALIGNMENT GUIDES */
+.guide{position:absolute;pointer-events:none;z-index:100;opacity:0;transition:opacity .1s;}
+.guide.h{left:0;right:0;height:1px;background:#f59e0b;}
+.guide.v{top:0;bottom:0;width:1px;background:#f59e0b;}
+.guide.visible{opacity:1;}
+/* LOCK overlay */
+.badge.locked .el,.badge.locked .el-photo{pointer-events:none;}
+.badge.locked .el:hover,.badge.locked .el-photo:hover{border-color:transparent;}
 </style>
 </head>
 <body>
@@ -123,8 +135,7 @@ canvas{display:none;}
   </div>
   <div class="sep"></div>
   <button class="tbtn" onclick="selectEl(null)">&#x2715; Deselect</button>
-  <button class="tbtn" id="btnStabilize" onclick="stabilize()">&#x1F512; Estabilizar</button>
-  <button class="tbtn" id="btnEdit" onclick="editMode()" style="display:none">&#x270E; Editar</button>
+  <button class="tbtn lock-btn" id="btnStabilize" onclick="stabilize()">&#x1F512;&nbsp;Estabilizar</button><button class="tbtn edit-btn" id="btnEdit" onclick="editMode()" style="display:none">&#x270F;&nbsp;Editar</button>
   <button class="tbtn" onclick="resetLayout()">&#x21BA; Reset</button>
   <div class="sep"></div>
   <button class="tbtn primary" onclick="dlPDF()">&#x2193; PDF Grafica</button>
@@ -216,6 +227,8 @@ canvas{display:none;}
     <div class="badge-wrap">
       <div class="badge" id="badgeFront">
         <div class="badge-slot"></div>
+        <div class="guide h" id="gFH" style="top:50%"></div>
+        <div class="guide v" id="gFV" style="left:50%"></div>
 
         <!-- PHOTO -->
         <div class="el-photo" id="elPhoto" style="left:28px;top:52px;width:136px;height:136px;">
@@ -255,6 +268,8 @@ canvas{display:none;}
     <div class="badge-wrap">
       <div class="badge" id="badgeBack">
         <div class="badge-slot"></div>
+        <div class="guide h" id="gBH" style="top:50%"></div>
+        <div class="guide v" id="gBV" style="left:50%"></div>
 
         <div class="el" id="elLogo" data-face="back" style="left:50%;top:80px;transform:translateX(-50%);text-align:center;color:#fff;font-size:42px;font-weight:700;letter-spacing:-2px;">
           <div id="elLogoBox" style="display:inline-flex;align-items:center;justify-content:center;border:3px solid #fff;width:80px;height:80px;">
@@ -365,13 +380,22 @@ document.addEventListener('mousemove',function(e){
     var ew=el.offsetWidth, eh=el.offsetHeight;
     var nx=Math.max(0,Math.min(bw-ew, drag.ox+dx));
     var ny=Math.max(0,Math.min(bh-eh, drag.oy+dy));
+    // SNAP + GUIDE: center horizontal
+    var snap=6;
+    var isFront=badge.id==='badgeFront';
+    var ghId=isFront?'gFH':'gBH', gvId=isFront?'gFV':'gBV';
+    var gh=document.getElementById(ghId), gv=document.getElementById(gvId);
+    // Vertical center snap
+    if(Math.abs((ny+eh/2)-bh/2)<snap){ny=Math.round(bh/2-eh/2);gh.classList.add('visible');}else{gh.classList.remove('visible');}
+    // Horizontal center snap
+    if(Math.abs((nx+ew/2)-bw/2)<snap){nx=Math.round(bw/2-ew/2);gv.classList.add('visible');}else{gv.classList.remove('visible');}
     // clear bottom/right if was set, use top/left
     el.style.bottom=''; el.style.right='';
     if(el.style.transform) el.style.transform='';
     el.style.left=nx+'px'; el.style.top=ny+'px';
   }
 });
-document.addEventListener('mouseup',function(){drag.el=null;});
+document.addEventListener('mouseup',function(){drag.el=null;['gFH','gFV','gBH','gBV'].forEach(function(id){var g=document.getElementById(id);if(g)g.classList.remove('visible');});});
 document.addEventListener('touchmove',function(e){
   if(!drag.el) return;
   var t=e.touches[0],dx=t.clientX-drag.sx,dy=t.clientY-drag.sy;
@@ -449,21 +473,15 @@ function updateCaseBtns(t){
 }
 
 function stabilize(){
-  // Disable dragging on all elements
-  document.querySelectorAll('.el,.el-photo').forEach(function(el){
-    el.style.pointerEvents='none';
-    el.classList.remove('selected');
-  });
+  document.querySelectorAll('.badge').forEach(function(b){b.classList.add('locked');});
+  document.querySelectorAll('.el,.el-photo').forEach(function(el){el.classList.remove('selected');});
   document.getElementById('elControls').classList.remove('visible');
   selectedEl=null;
   document.getElementById('btnStabilize').style.display='none';
   document.getElementById('btnEdit').style.display='';
-  document.getElementById('canvasArea').style.cursor='default';
 }
 function editMode(){
-  document.querySelectorAll('.el,.el-photo').forEach(function(el){
-    el.style.pointerEvents='auto';
-  });
+  document.querySelectorAll('.badge').forEach(function(b){b.classList.remove('locked');});
   document.getElementById('btnStabilize').style.display='';
   document.getElementById('btnEdit').style.display='none';
 }
