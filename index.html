@@ -851,9 +851,13 @@ function savePhoto(){
 //  CANVAS EXPORT — 600dpi
 // ─────────────────────────────────────────────
 var DPI=600,MM=DPI/25.4;
+// Tamanho final do crachá
 var BW=Math.round(54*MM),BH=Math.round(86*MM);
-var BL=Math.round(3*MM),CW=BW+BL*2,CH=BH+BL*2;
-var SC=BW/194; // preview px to canvas px ratio (badge width 194px)
+// Estouro (bleed): 1.5mm cada lado — fundo vai além do corte
+var BL=Math.round(1.5*MM),CW=BW+BL*2,CH=BH+BL*2;
+// Sangria: 2mm de margem de segurança do conteúdo (medido a partir da borda de corte)
+var SG=Math.round(2*MM);
+var SC=BW/194; // preview px → canvas px
 
 function rr(ctx,x,y,w,h,r){
   ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
@@ -1046,8 +1050,9 @@ function renderBack(canvas){
 }
 
 function roundCrop(url,wM,hM,rM){
+  // Crops out the 1.5mm bleed, returns exact wM x hM at 600dpi with rounded corners
   return new Promise(function(res){
-    var sc=600/25.4,bl=Math.round(3*sc),W=Math.round(wM*sc),H=Math.round(hM*sc),R=rM*sc;
+    var sc=600/25.4,bl=Math.round(1.5*sc),W=Math.round(wM*sc),H=Math.round(hM*sc),R=rM*sc;
     var img=new Image();
     img.onload=function(){
       var tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;
@@ -1067,22 +1072,57 @@ function tDL(url,n){var a=document.createElement('a');a.download=n;a.href=url;do
 async function dlPNG(){
   var c=document.getElementById('cv');
   var type=document.querySelector('input[name=type]:checked').value;
-  tDL(await renderFront(c),'cracha-'+type+'-FRENTE-600dpi.png');
-  await new Promise(function(r){setTimeout(r,800);});
-  tDL(await renderBack(c),'cracha-'+type+'-VERSO-600dpi.png');
+  var btnPng=document.querySelector('[onclick="dlPNG()"]');
+  if(btnPng){btnPng.innerHTML='&#x23F3; Gerando...';btnPng.disabled=true;}
+  // Render ambos antes de baixar (evita bloqueio do navegador)
+  var fu=await renderFront(c);
+  var bu=await renderBack(c);
+  // Frente
+  tDL(fu,'cracha-'+type+'-FRENTE-600dpi.png');
+  // Aguarda e baixa verso
+  await new Promise(function(r){setTimeout(r,1500);});
+  tDL(bu,'cracha-'+type+'-VERSO-600dpi.png');
+  if(btnPng){btnPng.innerHTML='&#x2193; PNG 600dpi';btnPng.disabled=false;}
+}
+
+function drawCropMarks(pdf, bleed, finalW, finalH){
+  // Draw crop marks at the 4 corners, outside the bleed area
+  var mk=3, gap=1; // mark length and gap from bleed edge (mm)
+  var x0=bleed, y0=bleed, x1=bleed+finalW, y1=bleed+finalH;
+  pdf.setDrawColor(0);pdf.setLineWidth(0.25);
+  // Top-left
+  pdf.line(x0-gap-mk, y0, x0-gap, y0);
+  pdf.line(x0, y0-gap-mk, x0, y0-gap);
+  // Top-right
+  pdf.line(x1+gap, y0, x1+gap+mk, y0);
+  pdf.line(x1, y0-gap-mk, x1, y0-gap);
+  // Bottom-left
+  pdf.line(x0-gap-mk, y1, x0-gap, y1);
+  pdf.line(x0, y1+gap, x0, y1+gap+mk);
+  // Bottom-right
+  pdf.line(x1+gap, y1, x1+gap+mk, y1);
+  pdf.line(x1, y1+gap, x1, y1+gap+mk);
 }
 
 async function dlPDF(){
-  var c=document.getElementById('cv'),pw=54,ph=86;
+  // Spec: 54x86mm final, 1.5mm estouro cada lado, 2mm sangria
+  var bleed=1.5, finalW=54, finalH=86;
+  var pw=finalW+bleed*2, ph=finalH+bleed*2; // 57 x 89mm com estouro
   var type=document.querySelector('input[name=type]:checked').value;
-  var fu=await renderFront(c),bu=await renderBack(c);
-  var fc=await roundCrop(fu,pw,ph,2),bc=await roundCrop(bu,pw,ph,2);
-  var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:[pw,ph]});
-  pdf.addImage(fc,'PNG',0,0,pw,ph,undefined,'NONE');
+  var c=document.getElementById('cv');
+  var fu=await renderFront(c), bu=await renderBack(c);
+  // PDF com estouro completo (sem crop — gráfica recebe com bleed)
+  var pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:[pw,ph],compress:false});
+  pdf.setProperties({title:'Cracha IB - '+type+' | 54x86mm + 1.5mm estouro',author:'Independent Brazil',creator:'Cracha IB Studio'});
+  // Página 1 — FRENTE
+  // Imagem ocupa toda a área incluindo estouro (57x89mm)
+  pdf.addImage(fu,'PNG',0,0,pw,ph,undefined,'NONE');
+  drawCropMarks(pdf,bleed,finalW,finalH);
+  // Página 2 — VERSO
   pdf.addPage([pw,ph]);
-  pdf.addImage(bc,'PNG',0,0,pw,ph,undefined,'NONE');
-  pdf.setProperties({title:'Cracha IB - '+type,author:'Independent Brazil',creator:'Cracha IB Studio'});
-  pdf.save('cracha-IB-'+type+'-GRAFICA.pdf');
+  pdf.addImage(bu,'PNG',0,0,pw,ph,undefined,'NONE');
+  drawCropMarks(pdf,bleed,finalW,finalH);
+  pdf.save('cracha-IB-'+type+'-GRAFICA-57x89mm.pdf');
 }
 </script>
 </body>
