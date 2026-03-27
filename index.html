@@ -203,7 +203,10 @@ canvas{display:none;}
         </div>
         <div class="ctrl-row photo-ctrl-row" style="display:none">
           <label>Cor borda</label>
-          <input type="color" id="ctrlPhotoBorderColor" value="#ffffff" oninput="applyPhotoCtrl('borderColor',this.value)">
+          <div style="display:flex;gap:6px;flex:1">
+            <button id="btnBordaBranco" onclick="applyPhotoCtrl('borderColor','#ffffff')" style="flex:1;padding:6px;border:2px solid #000;background:#ffffff;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:1px;">Branco</button>
+            <button id="btnBordaCinza" onclick="applyPhotoCtrl('borderColor','#888888')" style="flex:1;padding:6px;border:2px solid transparent;background:#888888;color:#fff;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:1px;">Cinza</button>
+          </div>
         </div>
       </div>
     </div>
@@ -459,7 +462,8 @@ function selectEl(el){
     document.getElementById('ctrlPhotoSizeV').textContent=Math.round(sz);
     document.getElementById('ctrlPhotoBorder').value=photoBorderPx;
     document.getElementById('ctrlPhotoBorderV').textContent=photoBorderPx;
-    document.getElementById('ctrlPhotoBorderColor').value=photoBorderColor;
+    // Highlight active border color button
+    applyPhotoCtrl('borderColor', photoBorderColor);
     return;
   }
   var fs=parseFloat(el.style.fontSize)||10;
@@ -490,18 +494,22 @@ function applyPhotoCtrl(prop, val){
   } else if(prop === 'borderColor'){
     photoBorderColor = val;
     updatePreviewBorder();
+    // Update button active states
+    var bb = document.getElementById('btnBordaBranco');
+    var bc = document.getElementById('btnBordaCinza');
+    if(bb) bb.style.border = val==='#ffffff' ? '2px solid #000' : '2px solid transparent';
+    if(bc) bc.style.border = val==='#888888' ? '2px solid #000' : '2px solid transparent';
   }
 }
 
 function updatePreviewBorder(){
-  // Update the visual ring on the preview photo
-  var inner = document.getElementById('bPhoto');
-  var ph = document.getElementById('elPhoto');
-  if(!ph) return;
-  // Use box-shadow on the img to simulate border without affecting layout
+  var ring = document.getElementById('photoRing');
+  if(!ring) return;
   var bpx = photoBorderPx;
   var col = photoBorderColor;
-  if(inner) inner.style.boxShadow = '0 0 0 '+bpx+'px '+col;
+  // box-shadow inset keeps circle shape; outset would be clipped by overflow:hidden
+  ring.style.boxShadow = bpx > 0 ? '0 0 0 '+bpx+'px '+col+', inset 0 0 0 '+bpx+'px '+col : 'none';
+  ring.style.border = bpx > 0 ? bpx+'px solid '+col : 'none';
 }
 
 function rgbToHex(c){
@@ -731,7 +739,7 @@ function restoreLayout(){
   var layout=JSON.parse(raw);
   if(layout.photoBorderPx !== undefined) photoBorderPx = layout.photoBorderPx;
   if(layout.photoBorderColor) photoBorderColor = layout.photoBorderColor;
-  updatePreviewBorder();
+  setTimeout(updatePreviewBorder, 100);
   SAVE_IDS.forEach(function(id){
     var el=document.getElementById(id);
     if(!el||!layout.elements[id])return;
@@ -880,6 +888,7 @@ function zm(d){A.s=Math.min(3,Math.max(0.5,A.s+d));document.getElementById('zSli
 function zTo(v){A.s=v;rdj();}
 document.addEventListener('DOMContentLoaded',function(){
   restoreLayout(); // restore persisted layout on page load
+  setTimeout(updatePreviewBorder, 200);
   var c=document.getElementById('adjCircle');
   c.addEventListener('mousedown',function(e){A.d=true;A.sx=e.clientX;A.sy=e.clientY;A.ox=A.x;A.oy=A.y;e.preventDefault();});
   document.addEventListener('mousemove',function(e){if(!A.d)return;A.x=A.ox+(e.clientX-A.sx);A.y=A.oy+(e.clientY-A.sy);rdj();});
