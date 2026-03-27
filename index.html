@@ -191,6 +191,20 @@ canvas{display:none;}
           <input type="range" id="ctrlSpacing" min="-2" max="10" step="0.5" value="0" oninput="applyCtrl('spacing',+this.value);document.getElementById('ctrlSpV').textContent=this.value">
           <span class="val" id="ctrlSpV">0</span>
         </div>
+        <div class="ctrl-row photo-ctrl-row" style="display:none">
+          <label>Tamanho</label>
+          <input type="range" id="ctrlPhotoSize" min="60" max="180" value="136" oninput="applyPhotoCtrl('size',+this.value);document.getElementById('ctrlPhotoSizeV').textContent=this.value">
+          <span class="val" id="ctrlPhotoSizeV">136</span>
+        </div>
+        <div class="ctrl-row photo-ctrl-row" style="display:none">
+          <label>Borda</label>
+          <input type="range" id="ctrlPhotoBorder" min="0" max="12" step="0.5" value="3.4" oninput="applyPhotoCtrl('border',+this.value);document.getElementById('ctrlPhotoBorderV').textContent=this.value">
+          <span class="val" id="ctrlPhotoBorderV">3.4</span>
+        </div>
+        <div class="ctrl-row photo-ctrl-row" style="display:none">
+          <label>Cor borda</label>
+          <input type="color" id="ctrlPhotoBorderColor" value="#ffffff" oninput="applyPhotoCtrl('borderColor',this.value)">
+        </div>
       </div>
     </div>
 
@@ -433,10 +447,21 @@ function selectEl(el){
   ctrl.classList.add('visible');
   var names={elBrand:'Logo Frente',elName:'Nome',elRole:'Funcao',elLogo:'Logo IB',elAdmLabel:'Label',elAdmVal:'Data / CNPJ',elSite:'Website',elPhoto:'Foto'};
   document.getElementById('elCtrlTitle').textContent=names[el.id]||el.id;
-  // Hide all text controls for image elements
+  // Hide/show controls based on element type
   var isImg=!!el.querySelector('img');
-  document.querySelectorAll('.text-ctrl-row').forEach(function(r){r.style.display=isImg?'none':'flex';});
-  if(isImg) return;
+  var isPhoto=el.id==='elPhoto';
+  document.querySelectorAll('.text-ctrl-row').forEach(function(r){r.style.display=(!isImg)?'flex':'none';});
+  document.querySelectorAll('.photo-ctrl-row').forEach(function(r){r.style.display=isPhoto?'flex':'none';});
+  if(isImg && !isPhoto) return;
+  if(isPhoto){
+    var sz=parseFloat(el.style.width)||136;
+    document.getElementById('ctrlPhotoSize').value=sz;
+    document.getElementById('ctrlPhotoSizeV').textContent=Math.round(sz);
+    document.getElementById('ctrlPhotoBorder').value=photoBorderPx;
+    document.getElementById('ctrlPhotoBorderV').textContent=photoBorderPx;
+    document.getElementById('ctrlPhotoBorderColor').value=photoBorderColor;
+    return;
+  }
   var fs=parseFloat(el.style.fontSize)||10;
   document.getElementById('ctrlSize').value=fs;
   document.getElementById('ctrlSizeV').textContent=Math.round(fs);
@@ -448,6 +473,35 @@ function selectEl(el){
   document.getElementById('ctrlSpacing').value=ls;
   document.getElementById('ctrlSpV').textContent=ls;
   updateCaseBtns(el.style.textTransform||'none');
+}
+
+function applyPhotoCtrl(prop, val){
+  var el = document.getElementById('elPhoto');
+  if(!el) return;
+  if(prop === 'size'){
+    var sz = val + 'px';
+    el.style.width = sz; el.style.height = sz;
+    document.getElementById('ctrlPhotoSizeV').textContent = val;
+    updatePreviewBorder();
+  } else if(prop === 'border'){
+    photoBorderPx = val;
+    document.getElementById('ctrlPhotoBorderV').textContent = val;
+    updatePreviewBorder();
+  } else if(prop === 'borderColor'){
+    photoBorderColor = val;
+    updatePreviewBorder();
+  }
+}
+
+function updatePreviewBorder(){
+  // Update the visual ring on the preview photo
+  var inner = document.getElementById('bPhoto');
+  var ph = document.getElementById('elPhoto');
+  if(!ph) return;
+  // Use box-shadow on the img to simulate border without affecting layout
+  var bpx = photoBorderPx;
+  var col = photoBorderColor;
+  if(inner) inner.style.boxShadow = '0 0 0 '+bpx+'px '+col;
 }
 
 function rgbToHex(c){
@@ -651,11 +705,15 @@ function importLayout(e){
 // ────────────────────────────────────────────────────
 
 // ── LAYOUT PERSISTENCE ──────────────────────────────
+// Photo border state (in preview px, converted to MM for canvas)
+var photoBorderPx = 3.4;   // preview px — ~1.8mm at 600dpi
+var photoBorderColor = '#ffffff';
+
 var SAVE_IDS=['elPhoto','elBrand','elName','elRole','elLogo','elAdmLabel','elAdmVal','elSite'];
 var STYLE_PROPS=['left','top','right','bottom','width','height','fontSize','fontWeight','color','letterSpacing','textTransform','opacity','transform'];
 
 function saveLayout(){
-  var layout={locked:true,elements:{}};
+  var layout={locked:true,elements:{},photoBorderPx:photoBorderPx,photoBorderColor:photoBorderColor};
   SAVE_IDS.forEach(function(id){
     var el=document.getElementById(id);
     if(!el)return;
@@ -671,6 +729,9 @@ function restoreLayout(){
   try{raw=localStorage.getItem('ibLayout');}catch(e){}
   if(!raw)return;
   var layout=JSON.parse(raw);
+  if(layout.photoBorderPx !== undefined) photoBorderPx = layout.photoBorderPx;
+  if(layout.photoBorderColor) photoBorderColor = layout.photoBorderColor;
+  updatePreviewBorder();
   SAVE_IDS.forEach(function(id){
     var el=document.getElementById(id);
     if(!el||!layout.elements[id])return;
@@ -972,8 +1033,12 @@ async function renderFront(canvas){
 
     var src=finP||rawP;
     function afterPhoto(){
-      // Clean white border — supersampled for crisp antialiasing
-      var bw=Math.round(1.8*MM);
+      // Clean border — supersampled for crisp antialiasing
+      // Convert preview px to canvas px: 1 preview px = (54/194) mm * (600/25.4) px
+      var previewToMM = 54/194;
+      var bw = Math.round(photoBorderPx * previewToMM * MM);
+      if(bw < 1) bw = 1;
+      var strokeColor = photoBorderColor || '#ffffff';
       // Draw at 4x then downscale for perfect smooth circle edge
       var ss=4;
       var bsz=Math.round((cr+bw*2)*2*ss);
@@ -983,7 +1048,7 @@ async function renderFront(canvas){
       bctx.imageSmoothingEnabled=true;bctx.imageSmoothingQuality='high';
       var bcx=bsz/2,bcy=bsz/2,bcr=(cr+bw/2)*ss;
       bctx.beginPath();bctx.arc(bcx,bcy,bcr,0,Math.PI*2);
-      bctx.strokeStyle='#ffffff';bctx.lineWidth=bw*ss;bctx.stroke();
+      bctx.strokeStyle=strokeColor;bctx.lineWidth=bw*ss;bctx.stroke();
       var finalSz=Math.round((cr+bw*2)*2);
       ctx.drawImage(btmp,cx-(cr+bw*2),cy-(cr+bw*2),finalSz,finalSz);
       // Name and role
