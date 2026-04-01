@@ -240,7 +240,7 @@ canvas{display:none;}
     <div class="lp-section">
       <div class="lp-title">Dados</div>
       <div class="field"><label>Nome</label><input type="text" id="nameIn" placeholder="Nome Completo" oninput="syncEl('name',this.value)"></div>
-      <div class="field"><label>Funcao</label><input type="text" id="roleIn" placeholder="Funcao / Cargo" oninput="syncEl('role',this.value)"></div>
+      <div class="field"><label>Função</label><input type="text" id="roleIn" placeholder="Função / Cargo" oninput="syncEl('role',this.value)"></div>
       <div class="field" id="admField"><label>Admissão</label><input type="date" id="admIn" onchange="syncAdm()"></div>
       <div class="field" id="cnpjField" style="display:none"><label>CNPJ</label><input type="text" id="cnpjIn" placeholder="00.000.000/0000-00" oninput="syncEl('cnpjval',this.value);fmtC(this)"></div>
     </div>
@@ -282,7 +282,7 @@ canvas{display:none;}
         </div>
 
         <div class="el" id="elRole" data-face="front" style="left:8px;right:8px;bottom:22px;text-align:center;color:rgba(255,255,255,0.6);font-size:8px;font-weight:400;">
-          <span id="elRoleTxt">Funcao</span>
+          <span id="elRoleTxt">Função</span>
           <div class="resize-handle rh-br" data-dir="br"></div>
         </div>
       </div>
@@ -448,7 +448,7 @@ function selectEl(el){
   if(!el){ctrl.classList.remove('visible');return;}
   el.classList.add('selected');
   ctrl.classList.add('visible');
-  var names={elBrand:'Logo Frente',elName:'Nome',elRole:'Funcao',elLogo:'Logo IB',elAdmLabel:'Label',elAdmVal:'Data / CNPJ',elSite:'Website',elPhoto:'Foto'};
+  var names={elBrand:'Logo Frente',elName:'Nome',elRole:'Função',elLogo:'Logo IB',elAdmLabel:'Label',elAdmVal:'Data / CNPJ',elSite:'Website',elPhoto:'Foto'};
   document.getElementById('elCtrlTitle').textContent=names[el.id]||el.id;
   // Hide/show controls based on element type
   var isImg=!!el.querySelector('img');
@@ -828,7 +828,7 @@ function syncType(){
 }
 function syncEl(id,val){
   var map={name:'elNameTxt',role:'elRoleTxt',cnpjval:'elAdmValTxt'};
-  if(map[id]) document.getElementById(map[id]).textContent=val||{name:'Nome Completo',role:'Funcao',cnpjval:'00.000.000/0000-00'}[id];
+  if(map[id]) document.getElementById(map[id]).textContent=val||{name:'Nome Completo',role:'Função',cnpjval:'00.000.000/0000-00'}[id];
 }
 function syncAdm(){
   var dt=document.getElementById('admIn').value;
