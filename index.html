@@ -241,7 +241,7 @@ canvas{display:none;}
       <div class="lp-title">Dados</div>
       <div class="field"><label>Nome</label><input type="text" id="nameIn" placeholder="Nome Completo" oninput="syncEl('name',this.value)"></div>
       <div class="field"><label>Funcao</label><input type="text" id="roleIn" placeholder="Funcao / Cargo" oninput="syncEl('role',this.value)"></div>
-      <div class="field" id="admField"><label>Admissao</label><input type="date" id="admIn" onchange="syncAdm()"></div>
+      <div class="field" id="admField"><label>Admissão</label><input type="date" id="admIn" onchange="syncAdm()"></div>
       <div class="field" id="cnpjField" style="display:none"><label>CNPJ</label><input type="text" id="cnpjIn" placeholder="00.000.000/0000-00" oninput="syncEl('cnpjval',this.value);fmtC(this)"></div>
     </div>
   </div>
@@ -304,7 +304,7 @@ canvas{display:none;}
         </div>
 
         <div class="el" id="elAdmLabel" data-face="back" style="left:0;right:0;top:188px;text-align:center;color:rgba(255,255,255,0.5);font-size:7px;font-weight:400;letter-spacing:0.5px;">
-          <span id="elAdmLabelTxt">Admissao:</span>
+          <span id="elAdmLabelTxt">Admissão:</span>
           <div class="resize-handle rh-br" data-dir="br"></div>
         </div>
 
@@ -816,7 +816,7 @@ function syncType(){
   var isPJ=document.querySelector('input[name=type]:checked').value==='PJ';
   document.getElementById('cnpjField').style.display=isPJ?'block':'none';
   document.getElementById('admField').style.display=isPJ?'none':'block';
-  document.getElementById('elAdmLabelTxt').textContent=isPJ?'CNPJ:':'Admissao:';
+  document.getElementById('elAdmLabelTxt').textContent=isPJ?'CNPJ:':'Admissão:';
   if(isPJ){
     var c=document.getElementById('cnpjIn').value;
     document.getElementById('elAdmValTxt').textContent=c||'00.000.000/0000-00';
